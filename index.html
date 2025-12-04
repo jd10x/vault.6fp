@@ -94,7 +94,7 @@
         }
 
         .logo-img {
-            max-width: 130px; /* UPDATED: Smaller size */
+            max-width: 130px; /* SIZE FIXED */
             width: 100%;
             height: auto;
             display: block;
@@ -127,7 +127,7 @@
             gap: 24px;
         }
 
-        /* Desktop Spotlight (Disabled on mobile to save battery/performance) */
+        /* Desktop Spotlight */
         @media (hover: hover) {
             .card::before {
                 content: "";
@@ -163,14 +163,14 @@
             margin: 0;
             line-height: 1.4;
             display: flex;
-            align-items: center; /* Aligns text vertically */
-            justify-content: flex-start; /* Aligns text to left */
-            min-height: 1.6em; /* Prevents vertical collapse */
+            align-items: center; 
+            justify-content: flex-start;
+            min-height: 1.6em;
         }
 
         .scramble-text { 
             display: inline-block;
-            white-space: nowrap; /* Forces text to one line */
+            white-space: nowrap; 
             vertical-align: middle;
         }
 
@@ -297,12 +297,11 @@
 
     <script>
         // ============================================
-        // 1. DATA INJECTION (ANTI-CACHE VERSION)
+        // 1. DATA INJECTION
         // ============================================
         
         async function loadPrompts() {
             try {
-                // Adds a timestamp to force the browser to see the new JSON
                 const bustCache = '?v=' + new Date().getTime();
                 const response = await fetch('prompts.json' + bustCache); 
                 
@@ -325,7 +324,7 @@
         // ============================================
         function renderCards(database) {
             const wrapper = document.getElementById('cards-wrapper');
-            wrapper.innerHTML = ''; // Clear loading state
+            wrapper.innerHTML = ''; 
 
             database.forEach((item) => {
                 const card = document.createElement('div');
@@ -353,7 +352,6 @@
                 initSlider(item.id, item.payload);
             });
             
-            // Trigger scramble after a slight delay to ensure fonts render
             setTimeout(() => {
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
             }, 600);
@@ -371,7 +369,7 @@
         const finalAmount = randomBase + (randomCents / 100);
 
         function runVaultSequence() {
-            loadPrompts(); // Fetch data immediately
+            loadPrompts(); 
 
             let start = 0;
             const duration = 2000;
@@ -399,7 +397,6 @@
 
         function openVault() {
             vaultOverlay.classList.add('vault-open');
-            // Redundant call to scramble ensures it runs if render was slow
             setTimeout(() => {
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
             }, 600);
@@ -408,7 +405,7 @@
         window.onload = runVaultSequence;
 
         // ============================================
-        // 4. SLIDER LOGIC (IOS FIXED)
+        // 4. SLIDER LOGIC (CRASH PROOF)
         // ============================================
         function initSlider(id, payload) {
             const container = document.getElementById(`slider-${id}`);
@@ -429,11 +426,11 @@
             let holdTimer = null;
             let holding = false;
             let hasCopied = false;
+            let atEdge = false; 
 
             function startDrag(e) {
                 if (container.classList.contains('success')) return;
                 
-                // Fallback check: if popup previously blocked, treat as click
                 if (container.classList.contains('fallback')) {
                     window.open("https://chatgpt.com", "_blank");
                     return;
@@ -441,6 +438,7 @@
 
                 isDragging = true;
                 hasCopied = false;
+                atEdge = false;
                 startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
                 containerWidth = container.offsetWidth;
                 maxSlide = containerWidth - 59; 
@@ -457,18 +455,19 @@
 
                 handle.style.left = `${5 + delta}px`;
 
-                // Only fade text if not in "Holding" state
                 if (!holding) {
                     text.style.opacity = 1 - (delta / maxSlide);
                 }
 
                 // Check Edge
                 if (delta >= maxSlide - 5) {
+                    atEdge = true; 
                     if (!holding) {
                         holding = true;
                         onHitEdge();
                     }
                 } else {
+                    atEdge = false;
                     if (holding) {
                         holding = false;
                         onLeaveEdge();
@@ -477,11 +476,15 @@
             }
 
             function onHitEdge() {
-                // 1. COPY ACTION (IOS SECURE METHOD)
+                // 1. Attempt Copy (Safely)
                 if (!hasCopied) {
-                    secureCopy(payload); // <--- Using the new helper
-                    hasCopied = true;
-                    if (navigator.vibrate) navigator.vibrate(50);
+                    try {
+                        secureCopy(payload);
+                        hasCopied = true;
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    } catch (e) {
+                        console.log("Drag-copy blocked by OS, waiting for release.");
+                    }
                 }
 
                 // 2. Feedback
@@ -508,7 +511,6 @@
                 ring.style.transition = 'stroke-dashoffset 0.2s';
                 ring.style.strokeDashoffset = circumference; 
                 
-                // If they copied but pulled back, keep visual confirmation
                 if (hasCopied) {
                     text.innerText = "COPIED";
                     text.style.opacity = '1'; 
@@ -522,14 +524,13 @@
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                 isDragging = false;
                 
+                // Final Copy Attempt
+                try { secureCopy(payload); } catch(e){}
+
                 const win = window.open("https://chatgpt.com", "_blank");
                 
-                // Cinematic Retraction
-                setTimeout(() => {
-                    resetSlider();
-                }, 1000); 
+                setTimeout(() => { resetSlider(); }, 1000); 
 
-                // Fallback Detection (If Popup Blocker catches it)
                 if (!win || win.closed || typeof win.closed === 'undefined') {
                     text.innerText = "TAP TO OPEN CHATGPT";
                     container.classList.remove('success');
@@ -543,7 +544,6 @@
                 if (container.classList.contains('fallback')) return;
 
                 container.classList.remove('success');
-                // Slow physics retraction
                 handle.style.transition = 'left 2s cubic-bezier(0.19, 1, 0.22, 1)';
                 handle.style.left = '5px';
                 
@@ -553,6 +553,7 @@
 
                 setTimeout(() => {
                     hasCopied = false;
+                    atEdge = false;
                     text.innerText = "Slide to Copy";
                     text.style.color = "#444";
                     text.style.opacity = 1;
@@ -561,6 +562,14 @@
             }
 
             function endDrag() {
+                // FORCE COPY ON RELEASE if user is at edge
+                // This ensures it works on iOS even if drag-copy failed
+                if (isDragging && atEdge) {
+                     try { secureCopy(payload); } catch(e){}
+                     text.innerText = "COPIED";
+                     text.style.opacity = 1;
+                }
+
                 if (!isDragging) return;
                 isDragging = false;
                 holding = false;
@@ -574,7 +583,7 @@
                     handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
                     handle.style.left = '5px';
                     
-                    if (hasCopied) {
+                    if (hasCopied || atEdge) {
                         text.innerText = "COPIED";
                         text.style.opacity = 1;
                         setTimeout(() => {
@@ -599,6 +608,7 @@
             window.addEventListener('touchmove', onDrag);
             window.addEventListener('mouseup', endDrag);
             window.addEventListener('touchend', endDrag);
+            window.addEventListener('touchcancel', endDrag); // Backup if phone interrupts
             
             container.addEventListener('click', () => {
                  if (container.classList.contains('fallback')) window.open("https://chatgpt.com", "_blank");
@@ -606,15 +616,14 @@
         }
 
         // ============================================
-        // 5. UTILS & IOS HELPERS
+        // 5. UTILS & IOS HELPERS (UPDATED)
         // ============================================
         
-        // --- IOS SAFE COPY FUNCTION ---
         function secureCopy(text) {
-            // 1. Try modern API (Works on Desktop/Android)
+            // We use the fallback immediately on iOS/Safari to be safe,
+            // as standard API often fails inside event handlers on mobile.
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).catch(() => {
-                    // If it fails (iOS Safari often blocks this in touch events), use fallback
                     iosCopyFallback(text);
                 });
             } else {
@@ -626,36 +635,38 @@
             const textArea = document.createElement("textarea");
             textArea.value = text;
             
-            // Hide it visually but keep it functional
+            // Prevent scrolling to bottom
             textArea.style.position = "fixed";
-            textArea.style.left = "-9999px";
             textArea.style.top = "0";
-            textArea.style.width = '2em';
-            textArea.style.height = '2em';
-            textArea.style.padding = '0';
-            textArea.style.border = 'none';
-            textArea.style.outline = 'none';
-            textArea.style.boxShadow = 'none';
-            textArea.style.background = 'transparent';
+            textArea.style.left = "-9999px";
             
-            // IMPORTANT: 'readonly' prevents the iOS keyboard from popping up
+            // Prevent Keyboard Flash
             textArea.setAttribute('readonly', '');
             
             document.body.appendChild(textArea);
             
-            textArea.focus();
-            textArea.select();
+            // iOS-Specific Selection Logic
+            if (navigator.userAgent.match(/ipad|iphone/i)) {
+                const range = document.createRange();
+                range.selectNodeContents(textArea);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                textArea.setSelectionRange(0, 999999);
+            } else {
+                textArea.select();
+            }
             
             try {
                 document.execCommand('copy');
             } catch (err) {
-                console.error('iOS Fallback failed', err);
+                console.error('Fallback copy failed', err);
             }
             
             document.body.removeChild(textArea);
         }
 
-        // --- SPOTLIGHT EFFECT ---
+        // Spotlight Effect
         document.getElementById("cards-wrapper").onmousemove = e => {
             for(const card of document.getElementsByClassName("card")) {
                 const rect = card.getBoundingClientRect(),
@@ -668,18 +679,14 @@
 
         const financeChars = "$0123456789,%#*@";
         
-        // --- ANTI-WIGGLE SCRAMBLE FUNCTION ---
         function scramble(element) {
             const originalText = element.dataset.value;
-            
-            // 1. LOCK THE WIDTH
-            // We calculate the precise width of the final text and force the element
-            // to stay that size. This prevents the card from "wiggling".
+            // Lock width to prevent wiggle
             const rect = element.getBoundingClientRect();
             if(rect.width > 0) {
                 element.style.width = `${rect.width}px`; 
             }
-            element.style.textAlign = 'left'; // Keep text aligned left within the box
+            element.style.textAlign = 'left'; 
 
             let iteration = 0;
             let interval = setInterval(() => {
@@ -691,7 +698,6 @@
                 
                 if(iteration >= originalText.length) {
                     clearInterval(interval);
-                    // We keep the width locked to ensure stability
                 }
                 
                 iteration += 1 / 3;
