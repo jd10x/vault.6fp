@@ -28,7 +28,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            overflow-x: hidden;
+            overflow-x: hidden; /* Prevents horizontal scroll */
         }
 
         /* --- 1. VAULT INTRO --- */
@@ -79,7 +79,7 @@
             align-items: center;
             opacity: 0;
             transition: opacity 1s ease-in 0.6s;
-            padding-bottom: 100px; /* Space for scrolling */
+            padding-bottom: 100px; /* Extra scroll space */
         }
         
         .vault-open + #main-app { opacity: 1; }
@@ -92,7 +92,7 @@
         }
 
         .logo-img {
-            max-width: 130px; /* Perfect sizing */
+            max-width: 130px; 
             width: 100%;
             height: auto;
             display: block;
@@ -154,15 +154,6 @@
             font-weight: 700;
         }
 
-        /* FLEX ROW FOR TITLE + COPY BUTTON */
-        .card-header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            gap: 15px;
-        }
-
         .card-title {
             font-size: 1.2rem;
             font-weight: 500;
@@ -179,43 +170,7 @@
             white-space: nowrap; 
         }
 
-        /* COPY BUTTON STYLES */
-        .copy-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid #222;
-            color: #888;
-            font-family: var(--font);
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 10px 14px; /* Generous touch target */
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-            outline: none;
-            flex-shrink: 0; /* Prevents button from shrinking on small screens */
-            z-index: 5;
-        }
-        
-        .copy-btn:active {
-            transform: scale(0.96);
-            background: #222;
-            color: #fff;
-        }
-
-        .copy-btn.copied {
-            background: #fff;
-            color: #000;
-            border-color: #fff;
-            transform: scale(1.02);
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
-        }
-
-        /* --- 4. THE SLIDER (LAUNCHER) --- */
+        /* --- 4. THE SMART SLIDER --- */
         .slider-container {
             width: 100%;
             height: 64px;
@@ -245,38 +200,49 @@
             z-index: 1;
         }
 
+        /* The Handle (Tap Target) */
         .slider-handle {
             position: absolute;
             left: 5px;
             top: 5px;
             width: 54px; 
             height: 54px;
-            background: #222;
+            background: #1a1a1a;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: grab;
             z-index: 5;
-            touch-action: none; /* CRITICAL: Prevents scroll on mobile */
-            transition: background 0.3s, transform 0.1s;
+            touch-action: none; /* CRITICAL: Enables physics tracking */
+            transition: background 0.3s, transform 0.1s, left 0.1s; 
             border: 1px solid #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         .slider-handle:active {
-            background: #333;
+            background: #252525;
             cursor: grabbing;
             transform: scale(0.95);
         }
 
         .slider-handle svg {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             stroke: #888;
-            transition: stroke 0.3s, opacity 0.3s;
+            transition: all 0.3s ease;
         }
 
-        /* SUCCESS STATE */
+        /* Visual State when Copied */
+        .slider-handle.copied-state {
+            background: #fff;
+            border-color: #fff;
+        }
+        .slider-handle.copied-state svg {
+            stroke: #000;
+        }
+
+        /* Success State (Launch) */
         .slider-container.success {
             border-color: #fff;
             background: #fff;
@@ -292,7 +258,7 @@
             font-weight: 800;
         }
 
-        /* FALLBACK (Popup Blocked) */
+        /* Fallback State (Popup Blocked) */
         .slider-container.fallback {
             border-color: #333;
             background: #111;
@@ -323,11 +289,12 @@
 
     <script>
         // ============================================
-        // 1. DATA INJECTION (ANTI-CACHE)
+        // 1. DATA INJECTION
         // ============================================
-        
         async function loadPrompts() {
             try {
+                // We add a timestamp to the URL to force the browser 
+                // to load the freshest JSON, preventing old cached data.
                 const bustCache = '?v=' + new Date().getTime();
                 const response = await fetch('prompts.json' + bustCache); 
                 
@@ -335,18 +302,17 @@
                 
                 const database = await response.json();
                 renderCards(database);
-                
             } catch (error) {
                 console.error("Could not load prompts:", error);
                 const wrapper = document.getElementById('cards-wrapper');
                 wrapper.innerHTML = `<div style="color:#666; text-align:center; font-family:sans-serif; padding-top:20px;">
-                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(Check prompts.json)</span>
+                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(Ensure prompts.json exists)</span>
                 </div>`;
             }
         }
 
         // ============================================
-        // 2. RENDER LOGIC (SPLIT ACTIONS)
+        // 2. RENDER LOGIC
         // ============================================
         function renderCards(database) {
             const wrapper = document.getElementById('cards-wrapper');
@@ -359,33 +325,25 @@
                 card.innerHTML = `
                     <div>
                         <div class="card-meta">${item.size}</div>
-                        <div class="card-header-row">
-                            <div class="card-title">
-                                <span class="scramble-text" data-value="${item.title}">${item.title}</span>
-                            </div>
-                            <button class="copy-btn" id="copy-${item.id}">
-                                <span>COPY</span>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                            </button>
+                        <div class="card-title">
+                            <span class="scramble-text" data-value="${item.title}">${item.title}</span>
                         </div>
                     </div>
                     
                     <div class="slider-container" id="slider-${item.id}">
-                        <div class="slider-text">Slide to Launch</div>
+                        <div class="slider-text">Tap to Copy &nbsp;/&nbsp; Slide</div>
                         <div class="slider-handle" id="handle-${item.id}">
                             <div class="icon-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </div>
                         </div>
                     </div>
                 `;
                 wrapper.appendChild(card);
-                
-                initCopyButton(item.id, item.payload);
-                initSlider(item.id);
+                initSmartSlider(item.id, item.payload);
             });
             
-            // Trigger scramble effect slightly after render
+            // Wait briefly for DOM/Fonts then scramble
             setTimeout(() => {
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
             }, 600);
@@ -404,7 +362,6 @@
 
         function runVaultSequence() {
             loadPrompts(); 
-
             let start = 0;
             const duration = 2000;
             const startTime = performance.now();
@@ -416,15 +373,11 @@
                 const currentVal = start + (finalAmount - start) * ease;
                 
                 counterEl.innerText = '$' + currentVal.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
+                    minimumFractionDigits: 2, maximumFractionDigits: 2
                 });
 
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                } else {
-                    setTimeout(openVault, 200);
-                }
+                if (progress < 1) requestAnimationFrame(update);
+                else setTimeout(openVault, 200);
             }
             requestAnimationFrame(update);
         }
@@ -435,39 +388,13 @@
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
             }, 600);
         }
-
         window.onload = runVaultSequence;
 
         // ============================================
-        // 4. COPY BUTTON LOGIC (100% IOS SAFE)
+        // 4. SMART SLIDER LOGIC
+        //    (Tap < 5px = Copy | Drag > 5px = Launch)
         // ============================================
-        function initCopyButton(id, payload) {
-            const btn = document.getElementById(`copy-${id}`);
-            
-            btn.addEventListener('click', (e) => {
-                // This 'click' is a trusted event on iOS
-                e.stopPropagation(); 
-                
-                // Use the fallback method because it is the most reliable cross-platform
-                iosCopyFallback(payload);
-                
-                // UX Feedback
-                btn.classList.add('copied');
-                btn.innerHTML = `<span>COPIED</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-                
-                if (navigator.vibrate) navigator.vibrate(50);
-
-                setTimeout(() => {
-                    btn.classList.remove('copied');
-                    btn.innerHTML = `<span>COPY</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-                }, 2000);
-            });
-        }
-
-        // ============================================
-        // 5. SLIDER LOGIC (LAUNCH ONLY - NO COPY)
-        // ============================================
-        function initSlider(id) {
+        function initSmartSlider(id, payload) {
             const container = document.getElementById(`slider-${id}`);
             const handle = document.getElementById(`handle-${id}`);
             const text = container.querySelector('.slider-text');
@@ -477,31 +404,37 @@
             let startX = 0;
             let containerWidth = 0;
             let maxSlide = 0;
+            let hasMovedSignificantly = false; // The magic flag
 
-            function startDrag(e) {
+            function start(e) {
                 if (container.classList.contains('success')) return;
                 
-                // If popup blocker caught it last time, fallback to click
                 if (container.classList.contains('fallback')) {
                     window.open("https://chatgpt.com", "_blank");
                     return;
                 }
 
                 isDragging = true;
+                hasMovedSignificantly = false; 
                 startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
                 containerWidth = container.offsetWidth;
                 maxSlide = containerWidth - 59; 
-                handle.style.transition = 'none';
+                handle.style.transition = 'none'; // Instant movement
             }
 
-            function onDrag(e) {
+            function move(e) {
                 if (!isDragging) return;
                 
-                // Critical: Stops page from scrolling while you drag the slider
+                // Stop page scroll on mobile while interacting with slider
                 if(e.cancelable && e.type === 'touchmove') e.preventDefault();
                 
                 const clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
                 let delta = clientX - startX;
+
+                // Physics Check: Did they move more than 5 pixels?
+                if (Math.abs(delta) > 5) {
+                    hasMovedSignificantly = true;
+                }
 
                 if (delta < 0) delta = 0;
                 if (delta > maxSlide) delta = maxSlide;
@@ -509,14 +442,55 @@
                 handle.style.left = `${5 + delta}px`;
                 text.style.opacity = 1 - (delta / maxSlide);
 
-                // Hit Edge
+                // Check for Slide Completion
                 if (delta >= maxSlide - 5) {
                     launch();
                 }
             }
 
-            function launch() {
+            function end(e) {
+                if (!isDragging) return;
                 isDragging = false;
+                
+                // DECISION: Was it a Tap or a Drag?
+                if (!hasMovedSignificantly && !container.classList.contains('success')) {
+                    // --- IT WAS A TAP -> COPY ---
+                    performCopy();
+                    // Snap back
+                    handle.style.left = '5px';
+                    text.style.opacity = 1;
+                } else {
+                    // --- IT WAS A DRAG -> RESET ---
+                    if (!container.classList.contains('success')) {
+                        handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
+                        handle.style.left = '5px';
+                        text.style.opacity = 1;
+                    }
+                }
+            }
+
+            function performCopy() {
+                // Execute Safe Copy
+                iosCopyFallback(payload);
+                
+                // Visual Feedback
+                handle.classList.add('copied-state');
+                iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                text.innerText = "COPIED!";
+                text.style.color = "#fff";
+                
+                if (navigator.vibrate) navigator.vibrate(50);
+
+                // Reset visual state after 2 seconds
+                setTimeout(() => {
+                    handle.classList.remove('copied-state');
+                    iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                    text.innerText = "Tap to Copy  /  Slide";
+                    text.style.color = "#444";
+                }, 2000);
+            }
+
+            function launch() {
                 container.classList.add('success');
                 text.innerText = "OPENING CHATGPT...";
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
@@ -525,49 +499,36 @@
                 
                 setTimeout(() => { resetSlider(); }, 2000); 
 
-                // Check if popup blocked
+                // Popup Blocker Detection
                 if (!win || win.closed || typeof win.closed === 'undefined') {
                     text.innerText = "TAP TO OPEN CHATGPT";
                     container.classList.remove('success');
                     container.classList.add('fallback');
                     handle.style.left = '5px';
-                    iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
                 }
             }
 
             function resetSlider() {
                 if (container.classList.contains('fallback')) return;
-
                 container.classList.remove('success');
                 handle.style.transition = 'left 0.5s cubic-bezier(0.2, 1, 0.3, 1)';
                 handle.style.left = '5px';
                 
                 setTimeout(() => {
-                    text.innerText = "Slide to Launch";
+                    text.innerText = "Tap to Copy  /  Slide";
                     text.style.color = "#444";
                     text.style.opacity = 1;
                 }, 500);
             }
 
-            function endDrag() {
-                if (!isDragging) return;
-                isDragging = false;
-                
-                // Snap back if not successful
-                if (!container.classList.contains('success')) {
-                    handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
-                    handle.style.left = '5px';
-                    text.style.opacity = 1;
-                }
-            }
-
-            handle.addEventListener('mousedown', startDrag);
-            handle.addEventListener('touchstart', startDrag, {passive: false});
-            window.addEventListener('mousemove', onDrag);
-            window.addEventListener('touchmove', onDrag, {passive: false}); 
-            window.addEventListener('mouseup', endDrag);
-            window.addEventListener('touchend', endDrag);
-            window.addEventListener('touchcancel', endDrag);
+            // Bind Events
+            handle.addEventListener('mousedown', start);
+            handle.addEventListener('touchstart', start, {passive: false});
+            window.addEventListener('mousemove', move);
+            window.addEventListener('touchmove', move, {passive: false}); 
+            window.addEventListener('mouseup', end);
+            window.addEventListener('touchend', end);
+            window.addEventListener('touchcancel', end);
             
             container.addEventListener('click', () => {
                  if (container.classList.contains('fallback')) window.open("https://chatgpt.com", "_blank");
@@ -575,7 +536,7 @@
         }
 
         // ============================================
-        // 6. UTILS (IOS COPY FALLBACK)
+        // 5. UTILS & IOS COPY FALLBACK
         // ============================================
         
         function iosCopyFallback(text) {
@@ -583,7 +544,7 @@
             input.setAttribute("type", "text");
             input.value = text;
             
-            // Fixed position, invisible but physically present
+            // Invisible but physically present
             input.style.position = "fixed";
             input.style.top = "0";
             input.style.left = "0";
@@ -593,21 +554,19 @@
             input.style.pointerEvents = "none";
             input.style.zIndex = "-1";
             
-            // Prevent Zoom on iOS
+            // Prevents iOS Zoom
             input.style.fontSize = "16px"; 
             
             document.body.appendChild(input);
-            
             input.focus();
             input.select();
-            input.setSelectionRange(0, 999999); // Essential for iOS
+            input.setSelectionRange(0, 999999);
             
             try {
                 document.execCommand('copy');
             } catch (err) {
                 console.error('Fallback copy failed', err);
             }
-            
             document.body.removeChild(input);
         }
 
@@ -626,11 +585,9 @@
         
         function scramble(element) {
             const originalText = element.dataset.value;
-            // Lock width to prevent layout shifts
+            // Lock width to prevent layout jitter
             const rect = element.getBoundingClientRect();
-            if(rect.width > 0) {
-                element.style.width = `${rect.width}px`; 
-            }
+            if(rect.width > 0) element.style.width = `${rect.width}px`; 
             element.style.textAlign = 'left'; 
 
             let iteration = 0;
@@ -640,11 +597,7 @@
                     if(originalText[index] === ' ') return ' ';
                     return financeChars[Math.floor(Math.random() * financeChars.length)];
                 }).join("");
-                
-                if(iteration >= originalText.length) {
-                    clearInterval(interval);
-                }
-                
+                if(iteration >= originalText.length) clearInterval(interval);
                 iteration += 1 / 3;
             }, 30);
         }
