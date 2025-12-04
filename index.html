@@ -13,7 +13,6 @@
             --border: #1a1a1a;
             --text: #e0e0e0;
             --text-dim: #666;
-            --accent: #ffffff;
             --font: 'Space Grotesk', sans-serif;
         }
 
@@ -45,9 +44,7 @@
 
         .door {
             position: absolute;
-            top: 0;
-            width: 50%;
-            height: 100%;
+            top: 0; width: 50%; height: 100%;
             background: #000;
             z-index: 2;
             transition: transform 1.2s cubic-bezier(0.8, 0, 0.2, 1);
@@ -82,6 +79,7 @@
             align-items: center;
             opacity: 0;
             transition: opacity 1s ease-in 0.6s;
+            padding-bottom: 100px; /* Space for scrolling */
         }
         
         .vault-open + #main-app { opacity: 1; }
@@ -94,7 +92,7 @@
         }
 
         .logo-img {
-            max-width: 130px; /* SIZE FIXED */
+            max-width: 130px; /* Perfect sizing */
             width: 100%;
             height: auto;
             display: block;
@@ -156,6 +154,15 @@
             font-weight: 700;
         }
 
+        /* FLEX ROW FOR TITLE + COPY BUTTON */
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 15px;
+        }
+
         .card-title {
             font-size: 1.2rem;
             font-weight: 500;
@@ -163,18 +170,52 @@
             margin: 0;
             line-height: 1.4;
             display: flex;
-            align-items: center; 
-            justify-content: flex-start;
-            min-height: 1.6em;
+            align-items: center;
+            flex-grow: 1;
         }
 
         .scramble-text { 
             display: inline-block;
             white-space: nowrap; 
-            vertical-align: middle;
         }
 
-        /* --- 4. THE SLIDER (SLIDE & DWELL) --- */
+        /* COPY BUTTON STYLES */
+        .copy-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #222;
+            color: #888;
+            font-family: var(--font);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 10px 14px; /* Generous touch target */
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            outline: none;
+            flex-shrink: 0; /* Prevents button from shrinking on small screens */
+            z-index: 5;
+        }
+        
+        .copy-btn:active {
+            transform: scale(0.96);
+            background: #222;
+            color: #fff;
+        }
+
+        .copy-btn.copied {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+
+        /* --- 4. THE SLIDER (LAUNCHER) --- */
         .slider-container {
             width: 100%;
             height: 64px;
@@ -187,6 +228,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            z-index: 5;
         }
 
         .slider-text {
@@ -203,7 +245,6 @@
             z-index: 1;
         }
 
-        /* The Draggable Circle */
         .slider-handle {
             position: absolute;
             left: 5px;
@@ -217,7 +258,7 @@
             justify-content: center;
             cursor: grab;
             z-index: 5;
-            touch-action: none; /* CRITICAL: Prevents page scroll on mobile */
+            touch-action: none; /* CRITICAL: Prevents scroll on mobile */
             transition: background 0.3s, transform 0.1s;
             border: 1px solid #333;
         }
@@ -233,21 +274,6 @@
             height: 22px;
             stroke: #888;
             transition: stroke 0.3s, opacity 0.3s;
-        }
-
-        /* PROGRESS RING */
-        .progress-ring {
-            position: absolute;
-            top: 0; left: 0;
-            width: 54px; height: 54px;
-            transform: rotate(-90deg);
-            pointer-events: none;
-            z-index: 6;
-        }
-        .progress-ring__circle {
-            transition: stroke-dashoffset 0s;
-            stroke: #fff;
-            opacity: 0;
         }
 
         /* SUCCESS STATE */
@@ -266,7 +292,7 @@
             font-weight: 800;
         }
 
-        /* FALLBACK STATE */
+        /* FALLBACK (Popup Blocked) */
         .slider-container.fallback {
             border-color: #333;
             background: #111;
@@ -297,7 +323,7 @@
 
     <script>
         // ============================================
-        // 1. DATA INJECTION
+        // 1. DATA INJECTION (ANTI-CACHE)
         // ============================================
         
         async function loadPrompts() {
@@ -314,13 +340,13 @@
                 console.error("Could not load prompts:", error);
                 const wrapper = document.getElementById('cards-wrapper');
                 wrapper.innerHTML = `<div style="color:#666; text-align:center; font-family:sans-serif; padding-top:20px;">
-                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(If this persists, verify prompts.json exists)</span>
+                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(Check prompts.json)</span>
                 </div>`;
             }
         }
 
         // ============================================
-        // 2. RENDER LOGIC
+        // 2. RENDER LOGIC (SPLIT ACTIONS)
         // ============================================
         function renderCards(database) {
             const wrapper = document.getElementById('cards-wrapper');
@@ -333,25 +359,33 @@
                 card.innerHTML = `
                     <div>
                         <div class="card-meta">${item.size}</div>
-                        <div class="card-title"><span class="scramble-text" data-value="${item.title}">${item.title}</span></div>
+                        <div class="card-header-row">
+                            <div class="card-title">
+                                <span class="scramble-text" data-value="${item.title}">${item.title}</span>
+                            </div>
+                            <button class="copy-btn" id="copy-${item.id}">
+                                <span>COPY</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="slider-container" id="slider-${item.id}">
-                        <div class="slider-text">Slide to Copy</div>
+                        <div class="slider-text">Slide to Launch</div>
                         <div class="slider-handle" id="handle-${item.id}">
                             <div class="icon-wrap">
-                                <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                             </div>
-                            <svg class="progress-ring" width="54" height="54">
-                                <circle class="progress-ring__circle" stroke="white" stroke-width="3" fill="transparent" r="24" cx="27" cy="27"/>
-                            </svg>
                         </div>
                     </div>
                 `;
                 wrapper.appendChild(card);
-                initSlider(item.id, item.payload);
+                
+                initCopyButton(item.id, item.payload);
+                initSlider(item.id);
             });
             
+            // Trigger scramble effect slightly after render
             setTimeout(() => {
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
             }, 600);
@@ -405,40 +439,55 @@
         window.onload = runVaultSequence;
 
         // ============================================
-        // 4. SLIDER LOGIC (CRASH PROOF)
+        // 4. COPY BUTTON LOGIC (100% IOS SAFE)
         // ============================================
-        function initSlider(id, payload) {
+        function initCopyButton(id, payload) {
+            const btn = document.getElementById(`copy-${id}`);
+            
+            btn.addEventListener('click', (e) => {
+                // This 'click' is a trusted event on iOS
+                e.stopPropagation(); 
+                
+                // Use the fallback method because it is the most reliable cross-platform
+                iosCopyFallback(payload);
+                
+                // UX Feedback
+                btn.classList.add('copied');
+                btn.innerHTML = `<span>COPIED</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                
+                if (navigator.vibrate) navigator.vibrate(50);
+
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = `<span>COPY</span> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                }, 2000);
+            });
+        }
+
+        // ============================================
+        // 5. SLIDER LOGIC (LAUNCH ONLY - NO COPY)
+        // ============================================
+        function initSlider(id) {
             const container = document.getElementById(`slider-${id}`);
             const handle = document.getElementById(`handle-${id}`);
             const text = container.querySelector('.slider-text');
             const iconWrap = handle.querySelector('.icon-wrap');
-            const ring = handle.querySelector('.progress-ring__circle');
             
-            const radius = ring.r.baseVal.value;
-            const circumference = radius * 2 * Math.PI;
-            ring.style.strokeDasharray = `${circumference} ${circumference}`;
-            ring.style.strokeDashoffset = circumference;
-
             let isDragging = false;
             let startX = 0;
             let containerWidth = 0;
             let maxSlide = 0;
-            let holdTimer = null;
-            let holding = false;
-            let hasCopied = false;
-            let atEdge = false; 
 
             function startDrag(e) {
                 if (container.classList.contains('success')) return;
                 
+                // If popup blocker caught it last time, fallback to click
                 if (container.classList.contains('fallback')) {
                     window.open("https://chatgpt.com", "_blank");
                     return;
                 }
 
                 isDragging = true;
-                hasCopied = false;
-                atEdge = false;
                 startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
                 containerWidth = container.offsetWidth;
                 maxSlide = containerWidth - 59; 
@@ -447,6 +496,10 @@
 
             function onDrag(e) {
                 if (!isDragging) return;
+                
+                // Critical: Stops page from scrolling while you drag the slider
+                if(e.cancelable && e.type === 'touchmove') e.preventDefault();
+                
                 const clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
                 let delta = clientX - startX;
 
@@ -454,83 +507,25 @@
                 if (delta > maxSlide) delta = maxSlide;
 
                 handle.style.left = `${5 + delta}px`;
+                text.style.opacity = 1 - (delta / maxSlide);
 
-                if (!holding) {
-                    text.style.opacity = 1 - (delta / maxSlide);
-                }
-
-                // Check Edge
+                // Hit Edge
                 if (delta >= maxSlide - 5) {
-                    atEdge = true; 
-                    if (!holding) {
-                        holding = true;
-                        onHitEdge();
-                    }
-                } else {
-                    atEdge = false;
-                    if (holding) {
-                        holding = false;
-                        onLeaveEdge();
-                    }
-                }
-            }
-
-            function onHitEdge() {
-                // 1. Attempt Copy (Safely)
-                if (!hasCopied) {
-                    try {
-                        secureCopy(payload);
-                        hasCopied = true;
-                        if (navigator.vibrate) navigator.vibrate(50);
-                    } catch (e) {
-                        console.log("Drag-copy blocked by OS, waiting for release.");
-                    }
-                }
-
-                // 2. Feedback
-                text.innerText = "✅ COPIED! KEEP HOLDING...";
-                text.style.opacity = '1';
-                text.style.color = "#fff";
-                
-                // 3. Icon Swap
-                iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
-
-                // 4. Ring Animation (1.2s)
-                ring.style.opacity = 1;
-                ring.style.transition = 'stroke-dashoffset 1.2s linear';
-                ring.style.strokeDashoffset = '0';
-
-                // 5. Timer
-                holdTimer = setTimeout(() => {
                     launch();
-                }, 1200);
-            }
-
-            function onLeaveEdge() {
-                clearTimeout(holdTimer);
-                ring.style.transition = 'stroke-dashoffset 0.2s';
-                ring.style.strokeDashoffset = circumference; 
-                
-                if (hasCopied) {
-                    text.innerText = "COPIED";
-                    text.style.opacity = '1'; 
-                    iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
                 }
             }
 
             function launch() {
+                isDragging = false;
                 container.classList.add('success');
                 text.innerText = "OPENING CHATGPT...";
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-                isDragging = false;
                 
-                // Final Copy Attempt
-                try { secureCopy(payload); } catch(e){}
-
                 const win = window.open("https://chatgpt.com", "_blank");
                 
-                setTimeout(() => { resetSlider(); }, 1000); 
+                setTimeout(() => { resetSlider(); }, 2000); 
 
+                // Check if popup blocked
                 if (!win || win.closed || typeof win.closed === 'undefined') {
                     text.innerText = "TAP TO OPEN CHATGPT";
                     container.classList.remove('success');
@@ -544,71 +539,35 @@
                 if (container.classList.contains('fallback')) return;
 
                 container.classList.remove('success');
-                handle.style.transition = 'left 2s cubic-bezier(0.19, 1, 0.22, 1)';
+                handle.style.transition = 'left 0.5s cubic-bezier(0.2, 1, 0.3, 1)';
                 handle.style.left = '5px';
                 
-                ring.style.opacity = 0;
-                ring.style.transition = 'none';
-                ring.style.strokeDashoffset = circumference;
-
                 setTimeout(() => {
-                    hasCopied = false;
-                    atEdge = false;
-                    text.innerText = "Slide to Copy";
+                    text.innerText = "Slide to Launch";
                     text.style.color = "#444";
                     text.style.opacity = 1;
-                    iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-                }, 2000);
+                }, 500);
             }
 
             function endDrag() {
-                // FORCE COPY ON RELEASE if user is at edge
-                // This ensures it works on iOS even if drag-copy failed
-                if (isDragging && atEdge) {
-                     try { secureCopy(payload); } catch(e){}
-                     text.innerText = "COPIED";
-                     text.style.opacity = 1;
-                }
-
                 if (!isDragging) return;
                 isDragging = false;
-                holding = false;
-                clearTimeout(holdTimer);
                 
-                ring.style.transition = 'none';
-                ring.style.strokeDashoffset = circumference;
-                ring.style.opacity = 0;
-
-                if (!container.classList.contains('success') && !container.classList.contains('fallback')) {
+                // Snap back if not successful
+                if (!container.classList.contains('success')) {
                     handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
                     handle.style.left = '5px';
-                    
-                    if (hasCopied || atEdge) {
-                        text.innerText = "COPIED";
-                        text.style.opacity = 1;
-                        setTimeout(() => {
-                            if(!isDragging && !container.classList.contains('success')) {
-                                text.innerText = "Slide to Copy";
-                                text.style.color = "#444";
-                                iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-                            }
-                        }, 3000);
-                    } else {
-                        text.innerText = "Slide to Copy";
-                        text.style.opacity = 1;
-                        text.style.color = "#444";
-                        iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-                    }
+                    text.style.opacity = 1;
                 }
             }
 
             handle.addEventListener('mousedown', startDrag);
-            handle.addEventListener('touchstart', startDrag);
+            handle.addEventListener('touchstart', startDrag, {passive: false});
             window.addEventListener('mousemove', onDrag);
-            window.addEventListener('touchmove', onDrag);
+            window.addEventListener('touchmove', onDrag, {passive: false}); 
             window.addEventListener('mouseup', endDrag);
             window.addEventListener('touchend', endDrag);
-            window.addEventListener('touchcancel', endDrag); // Backup if phone interrupts
+            window.addEventListener('touchcancel', endDrag);
             
             container.addEventListener('click', () => {
                  if (container.classList.contains('fallback')) window.open("https://chatgpt.com", "_blank");
@@ -616,46 +575,32 @@
         }
 
         // ============================================
-        // 5. UTILS & IOS HELPERS (UPDATED)
+        // 6. UTILS (IOS COPY FALLBACK)
         // ============================================
         
-        function secureCopy(text) {
-            // We use the fallback immediately on iOS/Safari to be safe,
-            // as standard API often fails inside event handlers on mobile.
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).catch(() => {
-                    iosCopyFallback(text);
-                });
-            } else {
-                iosCopyFallback(text);
-            }
-        }
-
         function iosCopyFallback(text) {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
+            const input = document.createElement("input");
+            input.setAttribute("type", "text");
+            input.value = text;
             
-            // Prevent scrolling to bottom
-            textArea.style.position = "fixed";
-            textArea.style.top = "0";
-            textArea.style.left = "-9999px";
+            // Fixed position, invisible but physically present
+            input.style.position = "fixed";
+            input.style.top = "0";
+            input.style.left = "0";
+            input.style.width = "100px";
+            input.style.height = "100px";
+            input.style.opacity = "0";
+            input.style.pointerEvents = "none";
+            input.style.zIndex = "-1";
             
-            // Prevent Keyboard Flash
-            textArea.setAttribute('readonly', '');
+            // Prevent Zoom on iOS
+            input.style.fontSize = "16px"; 
             
-            document.body.appendChild(textArea);
+            document.body.appendChild(input);
             
-            // iOS-Specific Selection Logic
-            if (navigator.userAgent.match(/ipad|iphone/i)) {
-                const range = document.createRange();
-                range.selectNodeContents(textArea);
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(range);
-                textArea.setSelectionRange(0, 999999);
-            } else {
-                textArea.select();
-            }
+            input.focus();
+            input.select();
+            input.setSelectionRange(0, 999999); // Essential for iOS
             
             try {
                 document.execCommand('copy');
@@ -663,7 +608,7 @@
                 console.error('Fallback copy failed', err);
             }
             
-            document.body.removeChild(textArea);
+            document.body.removeChild(input);
         }
 
         // Spotlight Effect
@@ -681,7 +626,7 @@
         
         function scramble(element) {
             const originalText = element.dataset.value;
-            // Lock width to prevent wiggle
+            // Lock width to prevent layout shifts
             const rect = element.getBoundingClientRect();
             if(rect.width > 0) {
                 element.style.width = `${rect.width}px`; 
