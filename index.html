@@ -284,13 +284,16 @@
 
     <script>
         // ============================================
-        // 1. DATA INJECTION (Fetches from prompts.json)
+        // 1. DATA INJECTION (ANTI-CACHE VERSION)
         // ============================================
         
         async function loadPrompts() {
             try {
-                // This looks for prompts.json in the same folder
-                const response = await fetch('prompts.json'); 
+                // Adds a unique timestamp ?v=12345 to the URL
+                // This forces the browser to download the NEW file every time.
+                const bustCache = '?v=' + new Date().getTime();
+                
+                const response = await fetch('prompts.json' + bustCache); 
                 if (!response.ok) throw new Error("JSON not found");
                 
                 const database = await response.json();
@@ -299,7 +302,9 @@
             } catch (error) {
                 console.error("Could not load prompts:", error);
                 const wrapper = document.getElementById('cards-wrapper');
-                wrapper.innerHTML = `<div style="color:#444; text-align:center;">LOADING...</div>`;
+                wrapper.innerHTML = `<div style="color:#666; text-align:center; font-family:sans-serif; padding-top:20px;">
+                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(If this persists, check prompts.json)</span>
+                </div>`;
             }
         }
 
@@ -308,7 +313,7 @@
         // ============================================
         function renderCards(database) {
             const wrapper = document.getElementById('cards-wrapper');
-            wrapper.innerHTML = ''; // Clear loading state
+            wrapper.innerHTML = ''; 
 
             database.forEach((item) => {
                 const card = document.createElement('div');
@@ -335,6 +340,10 @@
                 wrapper.appendChild(card);
                 initSlider(item.id, item.payload);
             });
+            
+            setTimeout(() => {
+                document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
+            }, 500);
         }
 
         // ============================================
@@ -349,7 +358,7 @@
         const finalAmount = randomBase + (randomCents / 100);
 
         function runVaultSequence() {
-            // Start loading data while animation plays
+            // Load data immediately
             loadPrompts();
 
             let start = 0;
@@ -378,10 +387,6 @@
 
         function openVault() {
             vaultOverlay.classList.add('vault-open');
-            // Trigger text scramble logic after vault starts opening
-            setTimeout(() => {
-                document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
-            }, 600);
         }
 
         window.onload = runVaultSequence;
