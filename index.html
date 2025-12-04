@@ -4,25 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SFP // VAULT</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- 0. RESET & CORE --- */
+        /* --- 0. PREMIUM RESET & VARIABLES --- */
         :root {
-            --bg: #000000;
-            --card-bg: #050505;
-            --border: #1a1a1a;
-            --text: #e0e0e0;
-            --text-dim: #666;
+            --bg: #030303;             /* Not pure black, richer dark grey */
+            --card-surface: #0a0a0a;   /* Subtle elevation */
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-active: rgba(255, 255, 255, 0.2);
+            --text-main: #ededed;
+            --text-muted: #888888;
             --accent: #ffffff;
-            --font: 'Space Grotesk', sans-serif;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'Space Grotesk', monospace;
+            --easing: cubic-bezier(0.16, 1, 0.3, 1); /* Apple-style easing */
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
 
         body {
             background-color: var(--bg);
-            color: var(--text);
-            font-family: var(--font);
+            color: var(--text-main);
+            font-family: var(--font-sans);
             margin: 0;
             padding: 0;
             min-height: 100vh;
@@ -32,7 +38,17 @@
             overflow-x: hidden;
         }
 
-        /* --- 1. VAULT INTRO --- */
+        /* FILM GRAIN TEXTURE (High-End Feel) */
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9998;
+        }
+
+        /* --- 1. VAULT INTRO ANIMATION --- */
         #vault-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -50,92 +66,111 @@
             height: 100%;
             background: #000;
             z-index: 2;
-            transition: transform 1.2s cubic-bezier(0.8, 0, 0.2, 1);
+            transition: transform 1.4s var(--easing);
             border-bottom: 1px solid #111;
+            will-change: transform;
         }
         
-        .door-left { left: 0; border-right: 1px solid #222; }
-        .door-right { right: 0; border-left: 1px solid #222; }
+        .door-left { left: 0; border-right: 1px solid #1a1a1a; }
+        .door-right { right: 0; border-left: 1px solid #1a1a1a; }
 
         .vault-counter {
             position: relative;
             z-index: 3;
-            font-size: 2.2rem;
-            font-weight: 700;
+            font-family: var(--font-mono);
+            font-size: 2.5rem;
+            font-weight: 500;
             color: #fff;
             font-variant-numeric: tabular-nums;
             letter-spacing: -1px;
-            transition: opacity 0.5s, transform 0.5s;
+            transition: opacity 0.6s var(--easing), transform 0.6s var(--easing);
         }
 
         .vault-open .door-left { transform: translateX(-100%); }
         .vault-open .door-right { transform: translateX(100%); }
-        .vault-open .vault-counter { opacity: 0; transform: scale(1.2); }
+        .vault-open .vault-counter { opacity: 0; transform: scale(1.1) translateY(-20px); }
 
-        /* --- 2. MAIN APP --- */
+        /* --- 2. MAIN APP LAYOUT --- */
         #main-app {
             width: 100%;
-            max-width: 600px;
-            padding: 40px 20px;
+            max-width: 580px; /* Tighter width for elegance */
+            padding: 60px 20px 40px;
             display: flex;
             flex-direction: column;
             align-items: center;
             opacity: 0;
-            transition: opacity 1s ease-in 0.6s;
+            /* The app fades in slightly after the doors open */
+            transition: opacity 1.2s ease-out 0.4s;
         }
         
         .vault-open + #main-app { opacity: 1; }
 
+        /* LOGO STYLING & ANIMATION */
         .brand-header {
-            margin-bottom: 50px;
+            margin-bottom: 60px;
             text-align: center;
             position: relative;
             z-index: 10;
+            opacity: 0; /* Hidden initially */
+            transform: translateY(20px);
+        }
+
+        /* Triggered via JS or delay */
+        .vault-open + #main-app .brand-header {
+            animation: driftIn 1.5s var(--easing) forwards;
+            animation-delay: 0.6s; /* Wait for doors */
+        }
+
+        @keyframes driftIn {
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .logo-img {
-            max-width: 180px;
+            max-width: 160px; /* Slightly smaller is more elegant */
             width: 100%;
             height: auto;
             display: block;
             margin: 0 auto;
-            animation: breathe 4s ease-in-out infinite;
+            /* Subtle breathing that starts after fade in */
+            animation: breathe 5s ease-in-out infinite; 
         }
 
         @keyframes breathe {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
+            0%, 100% { opacity: 0.9; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.02); }
         }
 
-        /* --- 3. THE CARD --- */
+        /* --- 3. CARDS --- */
         #cards-wrapper {
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            padding: 24px;
-            position: relative;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
             gap: 24px;
         }
 
-        /* Desktop Spotlight */
+        .card {
+            background-color: var(--card-surface);
+            border-radius: 20px; /* Softer corners */
+            border: 1px solid var(--border-subtle);
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); /* Deep shadow */
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        /* Desktop Spotlight Effect */
         @media (hover: hover) {
             .card::before {
                 content: "";
                 position: absolute;
                 top: 0; left: 0; right: 0; bottom: 0;
-                border-radius: 16px;
+                border-radius: 20px;
                 padding: 1px;
-                background: radial-gradient(600px circle at var(--x) var(--y), rgba(255, 255, 255, 0.4), transparent 40%);
+                background: radial-gradient(800px circle at var(--x) var(--y), rgba(255, 255, 255, 0.3), transparent 40%);
                 -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
                 -webkit-mask-composite: xor;
                 mask-composite: exclude;
@@ -147,45 +182,54 @@
             .card:hover::before { opacity: 1; }
         }
 
+        .card-header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
         .card-meta {
-            font-size: 10px;
+            font-family: var(--font-mono);
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 2px;
-            color: var(--text-dim);
-            margin-bottom: 8px;
-            font-weight: 700;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
         .card-title {
-            font-size: 1.2rem;
-            font-weight: 500;
-            color: #fff;
+            font-family: var(--font-sans);
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-main);
             margin: 0;
-            line-height: 1.4;
+            line-height: 1.3;
+            letter-spacing: -0.02em; /* Tight typography */
         }
 
         .scramble-text { display: inline-block; }
 
-        /* --- 4. THE SLIDER (SLIDE & DWELL) --- */
+        /* --- 4. THE SLIDER (Refined) --- */
         .slider-container {
             width: 100%;
-            height: 64px; /* Optimized for Thumb */
-            background: #000;
-            border: 1px solid #222;
-            border-radius: 50px;
+            height: 60px;
+            background: #050505;
+            border: 1px solid var(--border-subtle);
+            border-radius: 100px; /* Pill shape */
             position: relative;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); /* Inner depth */
         }
 
         .slider-text {
-            font-size: 0.85rem;
-            color: #444;
+            font-size: 0.8rem;
+            color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             font-weight: 600;
             pointer-events: none;
             transition: opacity 0.2s, color 0.2s;
@@ -195,43 +239,43 @@
             z-index: 1;
         }
 
-        /* The Draggable Circle */
         .slider-handle {
             position: absolute;
-            left: 5px;
-            top: 5px;
-            width: 54px; 
-            height: 54px;
-            background: #222;
+            left: 4px;
+            top: 4px;
+            width: 52px; 
+            height: 52px;
+            background: #1a1a1a;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: grab;
             z-index: 5;
-            touch-action: none; /* Critical for drag */
+            touch-action: none;
             transition: background 0.3s, transform 0.1s;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Pop off screen */
         }
 
         .slider-handle:active {
-            background: #333;
+            background: #2a2a2a;
             cursor: grabbing;
-            transform: scale(0.95);
+            transform: scale(0.96);
         }
 
         .slider-handle svg {
-            width: 22px;
-            height: 22px;
-            stroke: #888;
+            width: 20px;
+            height: 20px;
+            stroke: #fff;
+            opacity: 0.7;
             transition: stroke 0.3s, opacity 0.3s;
         }
 
-        /* PROGRESS RING */
         .progress-ring {
             position: absolute;
             top: 0; left: 0;
-            width: 54px; height: 54px;
+            width: 52px; height: 52px;
             transform: rotate(-90deg);
             pointer-events: none;
             z-index: 6;
@@ -244,18 +288,19 @@
 
         /* SUCCESS STATE */
         .slider-container.success {
-            border-color: #fff;
+            border-color: rgba(255,255,255,0.8);
             background: #fff;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
         }
         .slider-container.success .slider-handle {
             background: #000;
             border-color: #000;
-            left: calc(100% - 59px) !important;
+            left: calc(100% - 56px) !important;
         }
         .slider-container.success .slider-text {
             color: #000;
             opacity: 1 !important;
-            font-weight: 800;
+            font-weight: 700;
         }
 
         /* FALLBACK STATE */
@@ -307,8 +352,9 @@
             } catch (error) {
                 console.error("Could not load prompts:", error);
                 const wrapper = document.getElementById('cards-wrapper');
-                wrapper.innerHTML = `<div style="color:#666; text-align:center; font-family:sans-serif; padding-top:20px;">
-                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(If this persists, verify prompts.json exists)</span>
+                // Clean error UI
+                wrapper.innerHTML = `<div style="color:#444; text-align:center; font-family:var(--font-mono); font-size:12px; margin-top:40px;">
+                    INITIALIZING DATABASE...
                 </div>`;
             }
         }
@@ -318,15 +364,14 @@
         // ============================================
         function renderCards(database) {
             const wrapper = document.getElementById('cards-wrapper');
-            wrapper.innerHTML = ''; // Clear loading state
+            wrapper.innerHTML = ''; 
 
             database.forEach((item) => {
                 const card = document.createElement('div');
                 card.className = 'card';
 
-                // Fixed HTML syntax for the icon wrapper and handle
                 card.innerHTML = `
-                    <div>
+                    <div class="card-header">
                         <div class="card-meta">${item.size}</div>
                         <div class="card-title scramble-text" data-value="${item.title}">${item.title}</div>
                     </div>
@@ -337,8 +382,8 @@
                             <div class="icon-wrap">
                                 <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                             </div>
-                            <svg class="progress-ring" width="54" height="54">
-                                <circle class="progress-ring__circle" stroke="white" stroke-width="3" fill="transparent" r="24" cx="27" cy="27"/>
+                            <svg class="progress-ring" width="52" height="52">
+                                <circle class="progress-ring__circle" stroke="white" stroke-width="3" fill="transparent" r="23" cx="26" cy="26"/>
                             </svg>
                         </div>
                     </div>
@@ -347,10 +392,10 @@
                 initSlider(item.id, item.payload);
             });
             
-            // Trigger scramble effect
+            // Trigger scramble after small delay
             setTimeout(() => {
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
-            }, 500);
+            }, 800);
         }
 
         // ============================================
@@ -365,15 +410,16 @@
         const finalAmount = randomBase + (randomCents / 100);
 
         function runVaultSequence() {
-            loadPrompts(); // Fetch data immediately
+            loadPrompts();
 
             let start = 0;
-            const duration = 2000;
+            const duration = 2200; // 2.2s for dramatic effect
             const startTime = performance.now();
 
             function update(currentTime) {
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
+                // "Ease Out Quart" for that expensive feeling deceleration
                 const ease = 1 - Math.pow(1 - progress, 4); 
                 const currentVal = start + (finalAmount - start) * ease;
                 
@@ -385,7 +431,7 @@
                 if (progress < 1) {
                     requestAnimationFrame(update);
                 } else {
-                    setTimeout(openVault, 200);
+                    setTimeout(openVault, 300);
                 }
             }
             requestAnimationFrame(update);
@@ -393,9 +439,6 @@
 
         function openVault() {
             vaultOverlay.classList.add('vault-open');
-            setTimeout(() => {
-                document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
-            }, 600);
         }
 
         window.onload = runVaultSequence;
@@ -426,7 +469,6 @@
             function startDrag(e) {
                 if (container.classList.contains('success')) return;
                 
-                // Fallback check: if popup blocked previously, treat as click
                 if (container.classList.contains('fallback')) {
                     window.open("https://chatgpt.com", "_blank");
                     return;
@@ -436,7 +478,7 @@
                 hasCopied = false;
                 startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
                 containerWidth = container.offsetWidth;
-                maxSlide = containerWidth - 59; 
+                maxSlide = containerWidth - 56; // 52px handle + 4px margin
                 handle.style.transition = 'none';
             }
 
@@ -448,14 +490,11 @@
                 if (delta < 0) delta = 0;
                 if (delta > maxSlide) delta = maxSlide;
 
-                handle.style.left = `${5 + delta}px`;
+                handle.style.left = `${4 + delta}px`;
 
-                // Only fade text if not in "Holding" state
-                if (!holding) {
-                    text.style.opacity = 1 - (delta / maxSlide);
-                }
+                if (!holding) text.style.opacity = 1 - (delta / maxSlide);
 
-                // Check Edge
+                // Hit Edge (with 5px buffer)
                 if (delta >= maxSlide - 5) {
                     if (!holding) {
                         holding = true;
@@ -470,30 +509,21 @@
             }
 
             function onHitEdge() {
-                // 1. Copy once
                 if (!hasCopied) {
                     navigator.clipboard.writeText(payload);
                     hasCopied = true;
                     if (navigator.vibrate) navigator.vibrate(50);
                 }
-
-                // 2. Feedback
                 text.innerText = "✅ COPIED! KEEP HOLDING...";
                 text.style.opacity = '1';
                 text.style.color = "#fff";
-                
-                // 3. Icon Swap
                 iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
-
-                // 4. Ring Animation (1.2s)
+                
                 ring.style.opacity = 1;
                 ring.style.transition = 'stroke-dashoffset 1.2s linear';
                 ring.style.strokeDashoffset = '0';
-
-                // 5. Timer
-                holdTimer = setTimeout(() => {
-                    launch();
-                }, 1200);
+                
+                holdTimer = setTimeout(() => { launch(); }, 1200);
             }
 
             function onLeaveEdge() {
@@ -501,7 +531,6 @@
                 ring.style.transition = 'stroke-dashoffset 0.2s';
                 ring.style.strokeDashoffset = circumference; 
                 
-                // If they copied but pulled back, keep visual confirmation
                 if (hasCopied) {
                     text.innerText = "COPIED";
                     text.style.opacity = '1'; 
@@ -517,37 +546,35 @@
                 
                 const win = window.open("https://chatgpt.com", "_blank");
                 
-                // Cinematic Retraction
-                setTimeout(() => {
-                    resetSlider();
-                }, 1000); 
+                // Slow Retraction after launch
+                setTimeout(() => { resetSlider(); }, 1000); 
 
-                // Fallback Detection
+                // Fallback check
                 if (!win || win.closed || typeof win.closed === 'undefined') {
                     text.innerText = "TAP TO OPEN CHATGPT";
                     container.classList.remove('success');
                     container.classList.add('fallback');
-                    handle.style.left = '5px';
+                    handle.style.left = '4px';
                     iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
                 }
             }
 
             function resetSlider() {
                 if (container.classList.contains('fallback')) return;
-
+                
                 container.classList.remove('success');
-                // Slow physics
+                // Heavy, slow return
                 handle.style.transition = 'left 2s cubic-bezier(0.19, 1, 0.22, 1)';
-                handle.style.left = '5px';
+                handle.style.left = '4px';
                 
                 ring.style.opacity = 0;
                 ring.style.transition = 'none';
                 ring.style.strokeDashoffset = circumference;
-
+                
                 setTimeout(() => {
                     hasCopied = false;
                     text.innerText = "Slide to Copy";
-                    text.style.color = "#444";
+                    text.style.color = "#888"; // Reset to muted text color
                     text.style.opacity = 1;
                     iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
                 }, 2000);
@@ -565,7 +592,7 @@
 
                 if (!container.classList.contains('success') && !container.classList.contains('fallback')) {
                     handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
-                    handle.style.left = '5px';
+                    handle.style.left = '4px';
                     
                     if (hasCopied) {
                         text.innerText = "COPIED";
@@ -573,15 +600,14 @@
                         setTimeout(() => {
                             if(!isDragging && !container.classList.contains('success')) {
                                 text.innerText = "Slide to Copy";
-                                text.style.color = "#444";
+                                text.style.color = "#888";
                                 iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
                             }
                         }, 3000);
                     } else {
                         text.innerText = "Slide to Copy";
                         text.style.opacity = 1;
-                        text.style.color = "#444";
-                        iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+                        text.style.color = "#888";
                     }
                 }
             }
