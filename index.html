@@ -2,10 +2,620 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SixFigurePrompt – Coming Soon</title>
-    <meta name="description" content="Exciting new AI-powered tools coming soon at SixFigurePrompt.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SFP // VAULT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- 0. RESET & CORE --- */
+        :root {
+            --bg: #000000;
+            --card-bg: #050505;
+            --border: #1a1a1a;
+            --text: #e0e0e0;
+            --text-dim: #666;
+            --accent: #ffffff;
+            --font: 'Space Grotesk', sans-serif;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* --- 1. VAULT INTRO --- */
+        #vault-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .door {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            background: #000;
+            z-index: 2;
+            transition: transform 1.2s cubic-bezier(0.8, 0, 0.2, 1);
+            border-bottom: 1px solid #111;
+        }
+        
+        .door-left { left: 0; border-right: 1px solid #222; }
+        .door-right { right: 0; border-left: 1px solid #222; }
+
+        .vault-counter {
+            position: relative;
+            z-index: 3;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -1px;
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        .vault-open .door-left { transform: translateX(-100%); }
+        .vault-open .door-right { transform: translateX(100%); }
+        .vault-open .vault-counter { opacity: 0; transform: scale(1.2); }
+
+        /* --- 2. MAIN APP --- */
+        #main-app {
+            width: 100%;
+            max-width: 600px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 1s ease-in 0.6s;
+        }
+        
+        .vault-open + #main-app { opacity: 1; }
+
+        .brand-header {
+            margin-bottom: 50px;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo-img {
+            max-width: 180px;
+            width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            animation: breathe 4s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        /* --- 3. THE CARD --- */
+        #cards-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Desktop Spotlight */
+        @media (hover: hover) {
+            .card::before {
+                content: "";
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                border-radius: 16px;
+                padding: 1px;
+                background: radial-gradient(600px circle at var(--x) var(--y), rgba(255, 255, 255, 0.4), transparent 40%);
+                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                -webkit-mask-composite: xor;
+                mask-composite: exclude;
+                opacity: 0;
+                transition: opacity 0.5s;
+                pointer-events: none;
+                z-index: 2;
+            }
+            .card:hover::before { opacity: 1; }
+        }
+
+        .card-meta {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #fff;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .scramble-text { display: inline-block; }
+
+        /* --- 4. THE SLIDER (SLIDE & DWELL) --- */
+        .slider-container {
+            width: 100%;
+            height: 64px; /* Optimized for Thumb */
+            background: #000;
+            border: 1px solid #222;
+            border-radius: 50px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .slider-text {
+            font-size: 0.85rem;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            pointer-events: none;
+            transition: opacity 0.2s, color 0.2s;
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .slider-handle {
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            width: 54px; 
+            height: 54px;
+            background: #222;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            z-index: 5;
+            touch-action: none; /* Critical for drag */
+            transition: background 0.3s, transform 0.1s;
+            border: 1px solid #333;
+        }
+
+        .slider-handle:active {
+            background: #333;
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+
+        .slider-handle svg {
+            width: 22px;
+            height: 22px;
+            stroke: #888;
+            transition: stroke 0.3s, opacity 0.3s;
+        }
+
+        /* PROGRESS RING */
+        .progress-ring {
+            position: absolute;
+            top: 0; left: 0;
+            width: 54px; height: 54px;
+            transform: rotate(-90deg);
+            pointer-events: none;
+            z-index: 6;
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0s;
+            stroke: #fff;
+            opacity: 0;
+        }
+
+        /* SUCCESS STATE */
+        .slider-container.success {
+            border-color: #fff;
+            background: #fff;
+        }
+        .slider-container.success .slider-handle {
+            background: #000;
+            border-color: #000;
+            left: calc(100% - 59px) !important;
+        }
+        .slider-container.success .slider-text {
+            color: #000;
+            opacity: 1 !important;
+            font-weight: 800;
+        }
+
+        /* FALLBACK STATE */
+        .slider-container.fallback {
+            border-color: #333;
+            background: #111;
+        }
+        .slider-container.fallback .slider-text {
+            color: #fff;
+            opacity: 1 !important;
+            content: "TAP TO OPEN";
+        }
+        
+    </style>
 </head>
 <body>
-SixFigurePrompt is coming soon. Stay tuned!
+
+    <div id="vault-overlay">
+        <div class="door door-left"></div>
+        <div class="door door-right"></div>
+        <div class="vault-counter" id="counter">$0.00</div>
+    </div>
+
+    <div id="main-app">
+        <div class="brand-header">
+            <img src="SixFigurePrompt-LOGO-wh-on-bl.png" alt="SFP" class="logo-img">
+        </div>
+
+        <div id="cards-wrapper">
+            </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 1. DATA REPOSITORY
+        // ============================================
+        const database = [
+            {
+                id: "001",
+                title: "Google Trends Batch URL Generator",
+                size: "PROMPT // 2KB",
+                payload: `Execute: {"name":"Google Trends Batch URL Generator","description":"Act as a Google Trends URL generator that guides users through creating batched comparison links. Follow this 5-step interactive workflow.","creator":"Josh @joshdavis10x","role":"Help users analyze products using Google Trends by extracting product names, collecting preferences, and generating batch URLs (5 per link)","navigation":{"mandatory_footer":"═══════════════════════════════════════════════════════════\\n📍 [p] Previous | [n] Next | [r] Restart\\n═══════════════════════════════════════════════════════════","commands":{"p":"previous step (or 'Already at first step' if Step 1)","n":"next step only if current complete, else 'Please complete current step first'","r":"restart from Step 1"},"require_after_every_response":true},"steps":["1","2","3a","3b","3c","4","5"],"flow":"Step 1 → Step 2 → 3a → 3b → 3c → 3d → 4 → 5","step1":{"title":"STEP 1 OF 5: Website Content","message":"Please paste all the text from the website containing the products you want to analyze.","next":"wait for input → Step 2"},"step2":{"title":"STEP 2 OF 5: Product Extraction","rules":"Extract product titles/SKUs, skip nav/generic text","zero_found":"❌ No products detected. Can you specify which items to analyze?","many_found":"⚠️ Found [X] products ([Y] batches). Proceed with all or select specific ones?","list_format":"Found these products:\\na) Product 1\\nb) Product 2\\n...","options":"[a] Use all [b] Select specific (e.g. a,c,e) [c] Add manually [d] Remove (e.g. remove b,f)"},"step3":{"title":"STEP 3 OF 5: Configuration","substeps":{"3a_country":{"question":"Which country/region would you like to analyze?","options":"a) USA b) United Kingdom c) Worldwide d) Canada e) Australia f) Germany g) France h) Other (specify)","multi":"allowed, e.g. [a,b] or a,b,c"},"3b_time":{"question":"Select time range:","options":"a) Past hour b) Past 30 days c) Past 90 days d) Past 12 months e) Past 5 years","multi":"allowed"},"3c_searchtype":{"question":"Select search type:","options":"a) Web Search b) Google Shopping c) YouTube Search","multi":"allowed"}},"ask_one_at_a_time":true},"step4":{"title":"STEP 4 OF 5: Generating","action":"Create URLs","base_url":"https://trends.google.com/trends/explore?","params":{"date":{"past_hour":"now%201-H","past_30d":"today%201-m","past_90d":"today%203-m","past_12m":null,"past_5y":"today%205-y"},"geo":{"USA":"US","United Kingdom":"GB","Worldwide":null,"Canada":"CA","Australia":"AU","Germany":"DE","France":"FR"},"gprop":{"Web Search":null,"Google Shopping":"froogle","YouTube Search":"youtube"}},"encoding":"space→%20, &→%26, #→%23, %→%25, /→%2F","batching":"max 5 products per URL","combinations":"(#countries × #time_ranges × #search_types) separate URL sets"},"step5":{"title":"STEP 5 OF 5: Your Results","format":{"header":"🎯 Google Trends Analysis URLs","config":"🌍 Country: [names]\\n📅 Range: [times]\\n🔍 Search Type: [types]\\n🏷️ Query Type: [product/category/brand/topic/mixed]\\n📊 Total: [X] products, [Y] batches","batches":"Batch [n] (Products x-y)\\nProducts: [list]\\n🔗 [markdown link]","footer":"✅ Links ready! Click each batch to view trends.\\nOptions: [a] New analysis with different settings [b] Export as plain text [r] Restart\\n💡 Let me know if this helped! Made by Josh @joshdavis10x"}},"critical_rules":["Always show navigation footer","Never auto-advance","Accept comma-separated letters","Max 5 products per URL","Omit empty params","Correct URL encoding","Separate URL sets per country/time/searchtype combo (not query type)","Make links clickable markdown","Track current step","Created by Josh @joshdavis10x must be credited"]}`
+            }
+        ];
+
+        // ============================================
+        // 2. REAL BANK ACCOUNT ANIMATION
+        // ============================================
+        const counterEl = document.getElementById('counter');
+        const vaultOverlay = document.getElementById('vault-overlay');
+        
+        // Random Numbers Logic
+        const min = 100000;
+        const max = 999999;
+        const randomBase = Math.floor(Math.random() * (max - min + 1) + min); 
+        const randomCents = Math.floor(Math.random() * 100);
+        const finalAmount = randomBase + (randomCents / 100);
+
+        function runVaultSequence() {
+            let start = 0;
+            const duration = 2000;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 4); 
+                const currentVal = start + (finalAmount - start) * ease;
+                
+                counterEl.innerText = '$' + currentVal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    setTimeout(openVault, 200);
+                }
+            }
+            requestAnimationFrame(update);
+        }
+
+        function openVault() {
+            vaultOverlay.classList.add('vault-open');
+            setTimeout(() => {
+                document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
+            }, 600);
+        }
+
+        window.onload = runVaultSequence;
+
+        // ============================================
+        // 3. RENDER CONTENT
+        // ============================================
+        const wrapper = document.getElementById('cards-wrapper');
+
+        database.forEach((item) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            card.innerHTML = `
+                <div>
+                    <div class="card-meta">${item.size}</div>
+                    <div class="card-title scramble-text" data-value="${item.title}">${item.title}</div>
+                </div>
+                
+                <div class="slider-container" id="slider-${item.id}">
+                    <div class="slider-text">Slide to Copy</div>
+                    <div class="slider-handle" id="handle-${item.id}">
+                        <div class="icon-wrap">
+                            <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </div>
+                        <svg class="progress-ring" width="54" height="54">
+                           <circle class="progress-ring__circle" stroke="white" stroke-width="3" fill="transparent" r="24" cx="27" cy="27"/>
+                        </svg>
+                    </div>
+                </div>
+            `;
+            wrapper.appendChild(card);
+            initSlider(item.id, item.payload);
+        });
+
+        // ============================================
+        // 4. SLIDER LOGIC (FINAL)
+        // ============================================
+        function initSlider(id, payload) {
+            const container = document.getElementById(`slider-${id}`);
+            const handle = document.getElementById(`handle-${id}`);
+            const text = container.querySelector('.slider-text');
+            const iconWrap = handle.querySelector('.icon-wrap');
+            const ring = handle.querySelector('.progress-ring__circle');
+            
+            const radius = ring.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI;
+            ring.style.strokeDasharray = `${circumference} ${circumference}`;
+            ring.style.strokeDashoffset = circumference;
+
+            let isDragging = false;
+            let startX = 0;
+            let containerWidth = 0;
+            let maxSlide = 0;
+            let holdTimer = null;
+            let holding = false;
+            let hasCopied = false;
+
+            // START
+            function startDrag(e) {
+                if (container.classList.contains('success')) return;
+                
+                // Fallback Mode (Tap to Open)
+                if (container.classList.contains('fallback')) {
+                    window.open("https://chatgpt.com", "_blank");
+                    return;
+                }
+
+                isDragging = true;
+                hasCopied = false;
+                startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
+                containerWidth = container.offsetWidth;
+                maxSlide = containerWidth - 59; 
+                handle.style.transition = 'none';
+            }
+
+            // MOVE
+            function onDrag(e) {
+                if (!isDragging) return;
+                const clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
+                let delta = clientX - startX;
+
+                if (delta < 0) delta = 0;
+                if (delta > maxSlide) delta = maxSlide;
+
+                handle.style.left = `${5 + delta}px`;
+
+                // Fade text while sliding
+                if (!holding) {
+                    text.style.opacity = 1 - (delta / maxSlide);
+                }
+
+                // Hit Edge (with buffer)
+                if (delta >= maxSlide - 5) {
+                    if (!holding) {
+                        holding = true;
+                        onHitEdge();
+                    }
+                } else {
+                    if (holding) {
+                        holding = false;
+                        onLeaveEdge();
+                    }
+                }
+            }
+
+            // STATES
+            function onHitEdge() {
+                // 1. Copy (Once)
+                if (!hasCopied) {
+                    navigator.clipboard.writeText(payload);
+                    hasCopied = true;
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }
+
+                // 2. Feedback: Confirms copy & Instructs
+                text.innerText = "✅ COPIED! KEEP HOLDING...";
+                text.style.opacity = '1';
+                text.style.color = "#fff";
+                
+                // 3. Icon: Launch Arrow
+                iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
+
+                // 4. Fill Ring (1.2s)
+                ring.style.opacity = 1;
+                ring.style.transition = 'stroke-dashoffset 1.2s linear';
+                ring.style.strokeDashoffset = '0';
+
+                // 5. Launch Timer
+                holdTimer = setTimeout(() => {
+                    launch();
+                }, 1200);
+            }
+
+            function onLeaveEdge() {
+                clearTimeout(holdTimer);
+                // Reset Ring
+                ring.style.transition = 'stroke-dashoffset 0.2s';
+                ring.style.strokeDashoffset = circumference; 
+                
+                // If text was copied, keep green text temporarily
+                if (hasCopied) {
+                    text.innerText = "COPIED";
+                    text.style.opacity = '1'; 
+                    iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                }
+            }
+
+            function launch() {
+                container.classList.add('success');
+                text.innerText = "OPENING CHATGPT...";
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+                isDragging = false;
+                
+                const win = window.open("https://chatgpt.com", "_blank");
+                
+                // SLOW RETRACTION (The 2-second glide back)
+                setTimeout(() => {
+                    resetSlider();
+                }, 1000); 
+
+                // Fallback check
+                if (!win || win.closed || typeof win.closed === 'undefined') {
+                    text.innerText = "TAP TO OPEN CHATGPT";
+                    container.classList.remove('success');
+                    container.classList.add('fallback');
+                    handle.style.left = '5px';
+                    iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+                }
+            }
+
+            function resetSlider() {
+                if (container.classList.contains('fallback')) return;
+
+                container.classList.remove('success');
+                // HEAVY/SLOW RETRACTION
+                handle.style.transition = 'left 2s cubic-bezier(0.19, 1, 0.22, 1)';
+                handle.style.left = '5px';
+                
+                ring.style.opacity = 0;
+                ring.style.transition = 'none';
+                ring.style.strokeDashoffset = circumference;
+
+                setTimeout(() => {
+                    hasCopied = false;
+                    text.innerText = "Slide to Copy";
+                    text.style.color = "#444";
+                    text.style.opacity = 1;
+                    iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+                }, 2000); // Matches the transition time
+            }
+
+            function endDrag() {
+                if (!isDragging) return;
+                isDragging = false;
+                holding = false;
+                clearTimeout(holdTimer);
+                
+                ring.style.transition = 'none';
+                ring.style.strokeDashoffset = circumference;
+                ring.style.opacity = 0;
+
+                if (!container.classList.contains('success') && !container.classList.contains('fallback')) {
+                    handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
+                    handle.style.left = '5px';
+                    
+                    if (hasCopied) {
+                        text.innerText = "COPIED";
+                        text.style.opacity = 1;
+                        setTimeout(() => {
+                            if(!isDragging && !container.classList.contains('success')) {
+                                text.innerText = "Slide to Copy";
+                                text.style.color = "#444";
+                                iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+                            }
+                        }, 3000);
+                    } else {
+                        text.innerText = "Slide to Copy";
+                        text.style.opacity = 1;
+                        text.style.color = "#444";
+                    }
+                }
+            }
+
+            handle.addEventListener('mousedown', startDrag);
+            handle.addEventListener('touchstart', startDrag);
+            window.addEventListener('mousemove', onDrag);
+            window.addEventListener('touchmove', onDrag);
+            window.addEventListener('mouseup', endDrag);
+            window.addEventListener('touchend', endDrag);
+            
+            container.addEventListener('click', () => {
+                 if (container.classList.contains('fallback')) {
+                    window.open("https://chatgpt.com", "_blank");
+                 }
+            });
+        }
+
+        // ============================================
+        // 5. DESKTOP SPOTLIGHT
+        // ============================================
+        document.getElementById("cards-wrapper").onmousemove = e => {
+            for(const card of document.getElementsByClassName("card")) {
+                const rect = card.getBoundingClientRect(),
+                      x = e.clientX - rect.left,
+                      y = e.clientY - rect.top;
+
+                card.style.setProperty("--x", `${x}px`);
+                card.style.setProperty("--y", `${y}px`);
+            }
+        };
+
+        // ============================================
+        // 6. FINANCIAL SCRAMBLE
+        // ============================================
+        const financeChars = "$0123456789,%";
+        function scramble(element) {
+            let iteration = 0;
+            const originalText = element.dataset.value;
+            let interval = setInterval(() => {
+                element.innerText = originalText
+                    .split("")
+                    .map((letter, index) => {
+                        if(index < iteration) return originalText[index];
+                        if(originalText[index] === ' ') return ' ';
+                        return financeChars[Math.floor(Math.random() * financeChars.length)];
+                    })
+                    .join("");
+                
+                if(iteration >= originalText.length) clearInterval(interval);
+                iteration += 1 / 3;
+            }, 30);
+        }
+    </script>
 </body>
 </html>
