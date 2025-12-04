@@ -127,6 +127,7 @@
             gap: 24px;
         }
 
+        /* Desktop Spotlight */
         @media (hover: hover) {
             .card::before {
                 content: "";
@@ -165,10 +166,10 @@
 
         .scramble-text { display: inline-block; }
 
-        /* --- 4. THE SLIDER --- */
+        /* --- 4. THE SLIDER (SLIDE & DWELL) --- */
         .slider-container {
             width: 100%;
-            height: 64px;
+            height: 64px; /* Optimized for Thumb */
             background: #000;
             border: 1px solid #222;
             border-radius: 50px;
@@ -194,6 +195,7 @@
             z-index: 1;
         }
 
+        /* The Draggable Circle */
         .slider-handle {
             position: absolute;
             left: 5px;
@@ -207,7 +209,7 @@
             justify-content: center;
             cursor: grab;
             z-index: 5;
-            touch-action: none;
+            touch-action: none; /* Critical for drag */
             transition: background 0.3s, transform 0.1s;
             border: 1px solid #333;
         }
@@ -225,6 +227,7 @@
             transition: stroke 0.3s, opacity 0.3s;
         }
 
+        /* PROGRESS RING */
         .progress-ring {
             position: absolute;
             top: 0; left: 0;
@@ -239,6 +242,7 @@
             opacity: 0;
         }
 
+        /* SUCCESS STATE */
         .slider-container.success {
             border-color: #fff;
             background: #fff;
@@ -254,6 +258,7 @@
             font-weight: 800;
         }
 
+        /* FALLBACK STATE */
         .slider-container.fallback {
             border-color: #333;
             background: #111;
@@ -263,6 +268,7 @@
             opacity: 1 !important;
             content: "TAP TO OPEN";
         }
+        
     </style>
 </head>
 <body>
@@ -289,11 +295,10 @@
         
         async function loadPrompts() {
             try {
-                // Adds a unique timestamp ?v=12345 to the URL
-                // This forces the browser to download the NEW file every time.
+                // Adds a timestamp to force the browser to see the new JSON
                 const bustCache = '?v=' + new Date().getTime();
-                
                 const response = await fetch('prompts.json' + bustCache); 
+                
                 if (!response.ok) throw new Error("JSON not found");
                 
                 const database = await response.json();
@@ -303,7 +308,7 @@
                 console.error("Could not load prompts:", error);
                 const wrapper = document.getElementById('cards-wrapper');
                 wrapper.innerHTML = `<div style="color:#666; text-align:center; font-family:sans-serif; padding-top:20px;">
-                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(If this persists, check prompts.json)</span>
+                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(If this persists, verify prompts.json exists)</span>
                 </div>`;
             }
         }
@@ -313,12 +318,13 @@
         // ============================================
         function renderCards(database) {
             const wrapper = document.getElementById('cards-wrapper');
-            wrapper.innerHTML = ''; 
+            wrapper.innerHTML = ''; // Clear loading state
 
             database.forEach((item) => {
                 const card = document.createElement('div');
                 card.className = 'card';
 
+                // Fixed HTML syntax for the icon wrapper and handle
                 card.innerHTML = `
                     <div>
                         <div class="card-meta">${item.size}</div>
@@ -332,7 +338,7 @@
                                 <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                             </div>
                             <svg class="progress-ring" width="54" height="54">
-                            <circle class="progress-ring__circle" stroke="white" stroke-width="3" fill="transparent" r="24" cx="27" cy="27"/>
+                                <circle class="progress-ring__circle" stroke="white" stroke-width="3" fill="transparent" r="24" cx="27" cy="27"/>
                             </svg>
                         </div>
                     </div>
@@ -341,6 +347,7 @@
                 initSlider(item.id, item.payload);
             });
             
+            // Trigger scramble effect
             setTimeout(() => {
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
             }, 500);
@@ -358,8 +365,7 @@
         const finalAmount = randomBase + (randomCents / 100);
 
         function runVaultSequence() {
-            // Load data immediately
-            loadPrompts();
+            loadPrompts(); // Fetch data immediately
 
             let start = 0;
             const duration = 2000;
@@ -387,12 +393,15 @@
 
         function openVault() {
             vaultOverlay.classList.add('vault-open');
+            setTimeout(() => {
+                document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
+            }, 600);
         }
 
         window.onload = runVaultSequence;
 
         // ============================================
-        // 4. SLIDER LOGIC
+        // 4. SLIDER LOGIC (10/10 PHYSICS)
         // ============================================
         function initSlider(id, payload) {
             const container = document.getElementById(`slider-${id}`);
@@ -416,10 +425,13 @@
 
             function startDrag(e) {
                 if (container.classList.contains('success')) return;
+                
+                // Fallback check: if popup blocked previously, treat as click
                 if (container.classList.contains('fallback')) {
                     window.open("https://chatgpt.com", "_blank");
                     return;
                 }
+
                 isDragging = true;
                 hasCopied = false;
                 startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
@@ -438,8 +450,12 @@
 
                 handle.style.left = `${5 + delta}px`;
 
-                if (!holding) text.style.opacity = 1 - (delta / maxSlide);
+                // Only fade text if not in "Holding" state
+                if (!holding) {
+                    text.style.opacity = 1 - (delta / maxSlide);
+                }
 
+                // Check Edge
                 if (delta >= maxSlide - 5) {
                     if (!holding) {
                         holding = true;
@@ -454,25 +470,38 @@
             }
 
             function onHitEdge() {
+                // 1. Copy once
                 if (!hasCopied) {
                     navigator.clipboard.writeText(payload);
                     hasCopied = true;
                     if (navigator.vibrate) navigator.vibrate(50);
                 }
+
+                // 2. Feedback
                 text.innerText = "✅ COPIED! KEEP HOLDING...";
                 text.style.opacity = '1';
                 text.style.color = "#fff";
+                
+                // 3. Icon Swap
                 iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
+
+                // 4. Ring Animation (1.2s)
                 ring.style.opacity = 1;
                 ring.style.transition = 'stroke-dashoffset 1.2s linear';
                 ring.style.strokeDashoffset = '0';
-                holdTimer = setTimeout(() => { launch(); }, 1200);
+
+                // 5. Timer
+                holdTimer = setTimeout(() => {
+                    launch();
+                }, 1200);
             }
 
             function onLeaveEdge() {
                 clearTimeout(holdTimer);
                 ring.style.transition = 'stroke-dashoffset 0.2s';
                 ring.style.strokeDashoffset = circumference; 
+                
+                // If they copied but pulled back, keep visual confirmation
                 if (hasCopied) {
                     text.innerText = "COPIED";
                     text.style.opacity = '1'; 
@@ -485,8 +514,15 @@
                 text.innerText = "OPENING CHATGPT...";
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                 isDragging = false;
+                
                 const win = window.open("https://chatgpt.com", "_blank");
-                setTimeout(() => { resetSlider(); }, 1000); 
+                
+                // Cinematic Retraction
+                setTimeout(() => {
+                    resetSlider();
+                }, 1000); 
+
+                // Fallback Detection
                 if (!win || win.closed || typeof win.closed === 'undefined') {
                     text.innerText = "TAP TO OPEN CHATGPT";
                     container.classList.remove('success');
@@ -498,12 +534,16 @@
 
             function resetSlider() {
                 if (container.classList.contains('fallback')) return;
+
                 container.classList.remove('success');
+                // Slow physics
                 handle.style.transition = 'left 2s cubic-bezier(0.19, 1, 0.22, 1)';
                 handle.style.left = '5px';
+                
                 ring.style.opacity = 0;
                 ring.style.transition = 'none';
                 ring.style.strokeDashoffset = circumference;
+
                 setTimeout(() => {
                     hasCopied = false;
                     text.innerText = "Slide to Copy";
@@ -518,6 +558,7 @@
                 isDragging = false;
                 holding = false;
                 clearTimeout(holdTimer);
+                
                 ring.style.transition = 'none';
                 ring.style.strokeDashoffset = circumference;
                 ring.style.opacity = 0;
@@ -525,6 +566,7 @@
                 if (!container.classList.contains('success') && !container.classList.contains('fallback')) {
                     handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
                     handle.style.left = '5px';
+                    
                     if (hasCopied) {
                         text.innerText = "COPIED";
                         text.style.opacity = 1;
@@ -539,6 +581,7 @@
                         text.innerText = "Slide to Copy";
                         text.style.opacity = 1;
                         text.style.color = "#444";
+                        iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
                     }
                 }
             }
