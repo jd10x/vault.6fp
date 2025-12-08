@@ -16,7 +16,7 @@
             --font: 'Space Grotesk', sans-serif;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             background-color: var(--bg);
@@ -40,6 +40,7 @@
             align-items: center;
             justify-content: center;
             pointer-events: none;
+            user-select: none;
         }
 
         .door {
@@ -79,7 +80,7 @@
             align-items: center;
             opacity: 0;
             transition: opacity 1s ease-in 0.6s;
-            padding-bottom: 150px; /* Extra scrolling space */
+            padding-bottom: 150px; 
         }
         
         .vault-open + #main-app { opacity: 1; }
@@ -89,6 +90,7 @@
             text-align: center;
             position: relative;
             z-index: 10;
+            user-select: none;
         }
 
         .logo-img {
@@ -97,13 +99,29 @@
             height: auto;
             display: block;
             margin: 0 auto;
+            /* Existing breathe animation */
             animation: breathe 4s ease-in-out infinite;
+            /* Prepare for sheen effect */
+            will-change: filter; 
         }
 
         @keyframes breathe {
             0%, 100% { opacity: 0.8; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.02); }
         }
+
+        /* --- NEW: LOGO SHEEN EFFECT --- */
+        .logo-img.sheen-active {
+            /* Overrides breathe temporarily with a intense glow pulse */
+            animation: logo-sheen-pulse 0.8s ease-out forwards !important;
+        }
+
+        @keyframes logo-sheen-pulse {
+            0% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)) brightness(1); }
+            40% { filter: drop-shadow(0 0 25px rgba(255,255,255,0.9)) brightness(1.3); transform: scale(1.05); }
+            100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)) brightness(1); transform: scale(1); }
+        }
+
 
         /* --- 3. THE CARD --- */
         #cards-wrapper {
@@ -184,7 +202,6 @@
             justify-content: center;
             cursor: pointer;
             z-index: 5;
-            /* Prevents browser handling of gestures inside the slider */
             touch-action: none; 
             user-select: none;
         }
@@ -282,7 +299,7 @@
 
     <div id="main-app">
         <div class="brand-header">
-            <img src="SixFigurePrompt-LOGO-wh-on-bl.png" alt="SFP" class="logo-img">
+            <img src="SixFigurePrompt-LOGO-wh-on-bl.png" alt="SFP" class="logo-img" id="main-logo">
         </div>
 
         <div id="cards-wrapper">
@@ -291,16 +308,18 @@
 
     <script>
         // ============================================
-        // 1. DATA INJECTION (Cache-Busting)
+        // 0. CONFIGURATION
+        // ============================================
+        const MASTER_LINK = "https://chatgpt.com/gg/v/69321bd173ec81a1bf05142deb8b6d11?token=RGxcYKl-dcfH9WCO2A5o_Q";
+
+        // ============================================
+        // 1. DATA INJECTION
         // ============================================
         async function loadPrompts() {
             try {
-                // Adds timestamp to URL to force fresh data load
                 const bustCache = '?v=' + new Date().getTime();
                 const response = await fetch('prompts.json' + bustCache); 
-                
                 if (!response.ok) throw new Error("JSON not found");
-                
                 const database = await response.json();
                 renderCards(database);
             } catch (error) {
@@ -391,7 +410,7 @@
         window.onload = runVaultSequence;
 
         // ============================================
-        // 4. SMART SLIDER LOGIC (Bulletproof)
+        // 4. SMART SLIDER LOGIC
         // ============================================
         function initSmartSlider(id, payload) {
             const container = document.getElementById(`slider-${id}`);
@@ -404,15 +423,13 @@
             let containerWidth = 0;
             let maxSlide = 0;
             let hasMovedSignificantly = false; 
-            let launched = false; // State Lock
+            let launched = false;
 
             function start(e) {
-                // Ignore if already launched
                 if (container.classList.contains('success') || launched) return;
                 
-                // Fallback Mode check
                 if (container.classList.contains('fallback')) {
-                    window.open("https://chatgpt.com/gg/v/69321bd173ec81a1bf05142deb8b6d11?token=RGxcYKl-dcfH9WCO2A5o_Q", "_blank");
+                    window.open(MASTER_LINK, "_blank");
                     return;
                 }
 
@@ -421,22 +438,17 @@
                 startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
                 containerWidth = container.offsetWidth;
                 maxSlide = containerWidth - 59; 
-                handle.style.transition = 'none'; // Disable transition for 1:1 physics
+                handle.style.transition = 'none';
             }
 
             function move(e) {
                 if (!isDragging || launched) return;
-                
-                // CRITICAL: Prevents page scroll while sliding on mobile
                 if(e.cancelable && e.type === 'touchmove') e.preventDefault();
                 
                 const clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
                 let delta = clientX - startX;
 
-                // Physics: If moved > 5px, it's a drag, not a tap
-                if (Math.abs(delta) > 5) {
-                    hasMovedSignificantly = true;
-                }
+                if (Math.abs(delta) > 5) hasMovedSignificantly = true;
 
                 if (delta < 0) delta = 0;
                 if (delta > maxSlide) delta = maxSlide;
@@ -444,27 +456,18 @@
                 handle.style.left = `${5 + delta}px`;
                 text.style.opacity = 1 - (delta / maxSlide);
 
-                // --- LAUNCH TRIGGER ---
-                if (delta >= maxSlide - 5) {
-                    launch();
-                }
+                if (delta >= maxSlide - 5) launch();
             }
 
             function end(e) {
                 if (!isDragging || launched) return;
                 isDragging = false;
                 
-                // LOGIC TREE:
-                // 1. Didn't move much? -> Tap -> Copy
-                // 2. Moved a lot but didn't finish? -> Drag -> Reset
-                
                 if (!hasMovedSignificantly) {
                     performCopy();
-                    // Snap back instantly
                     handle.style.left = '5px';
                     text.style.opacity = 1;
                 } else {
-                    // Reset with animation
                     handle.style.transition = 'left 0.3s cubic-bezier(0.2, 1, 0.3, 1)';
                     handle.style.left = '5px';
                     text.style.opacity = 1;
@@ -472,12 +475,22 @@
             }
 
             function performCopy() {
-                if(launched) return; // Safety check
+                if(launched) return; 
 
-                // IOS Safe Copy
-                iosCopyFallback(payload);
-                
-                // Visual Feedback
+                // --- NEW: Trigger Logo Sheen Effect ---
+                triggerLogoSheenEffect();
+
+                // Try Modern API first
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(payload)
+                        .then(() => triggerCopySuccess())
+                        .catch(() => iosCopyFallback(payload)); 
+                } else {
+                    iosCopyFallback(payload);
+                }
+            }
+
+            function triggerCopySuccess() {
                 handle.classList.add('copied-state');
                 iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
                 text.innerText = "COPIED!";
@@ -485,7 +498,6 @@
                 
                 if (navigator.vibrate) navigator.vibrate(50);
 
-                // Reset after delay
                 setTimeout(() => {
                     if(!launched) { 
                         handle.classList.remove('copied-state');
@@ -494,6 +506,23 @@
                         text.style.color = "#444";
                     }
                 }, 2000);
+            }
+
+            function iosCopyFallback(text) {
+                const input = document.createElement("input");
+                input.setAttribute("type", "text");
+                input.value = text;
+                input.style.position = "fixed";
+                input.style.top = "0"; input.style.left = "0";
+                input.style.opacity = "0"; input.style.pointerEvents = "none";
+                
+                document.body.appendChild(input);
+                input.focus(); input.select();
+                try {
+                    document.execCommand('copy');
+                    triggerCopySuccess(); 
+                } catch (err) { console.error('Fallback copy failed', err); }
+                document.body.removeChild(input);
             }
 
             function launch() {
@@ -505,82 +534,61 @@
                 text.innerText = "OPENING CHATGPT...";
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                 
-                const win = window.open("https://chatgpt.com/gg/v/69321bd173ec81a1bf05142deb8b6d11?token=RGxcYKl-dcfH9WCO2A5o_Q", "_blank");
+                const win = window.open(MASTER_LINK, "_blank");
                 
                 setTimeout(() => { resetSlider(); }, 2000); 
 
-                // Popup Blocker Detection
                 if (!win || win.closed || typeof win.closed === 'undefined') {
                     text.innerText = "TAP TO OPEN CHATGPT";
                     container.classList.remove('success');
                     container.classList.add('fallback');
                     handle.style.left = '5px';
-                    launched = false; // Reset to allow click
+                    launched = false;
                 }
             }
 
             function resetSlider() {
                 if (container.classList.contains('fallback')) return;
-                
                 container.classList.remove('success');
                 handle.style.transition = 'left 0.5s cubic-bezier(0.2, 1, 0.3, 1)';
                 handle.style.left = '5px';
-                
                 setTimeout(() => {
-                    launched = false; // Unlock state
+                    launched = false; 
                     text.innerText = "Tap to Copy  /  Slide";
                     text.style.color = "#444";
                     text.style.opacity = 1;
                 }, 500);
             }
 
-            // --- EVENT LISTENERS ---
             handle.addEventListener('mousedown', start);
             handle.addEventListener('touchstart', start, {passive: false});
-            
             window.addEventListener('mousemove', move);
             window.addEventListener('touchmove', move, {passive: false}); 
-            
             window.addEventListener('mouseup', end);
             window.addEventListener('touchend', end);
-            window.addEventListener('touchcancel', end); // Safety: Snap back if phone interrupts
-            window.addEventListener('mouseleave', end);  // Safety: Snap back if mouse leaves window
+            window.addEventListener('touchcancel', end); 
+            window.addEventListener('mouseleave', end);  
             
             container.addEventListener('click', () => {
-                 if (container.classList.contains('fallback')) window.open("https://chatgpt.com/gg/v/69321bd173ec81a1bf05142deb8b6d11?token=RGxcYKl-dcfH9WCO2A5o_Q", "_blank");
+                 if (container.classList.contains('fallback')) window.open(MASTER_LINK, "_blank");
             });
         }
 
         // ============================================
-        // 5. UTILS & IOS FALLBACK
+        // 5. UTILS 
         // ============================================
-        function iosCopyFallback(text) {
-            const input = document.createElement("input");
-            input.setAttribute("type", "text");
-            input.value = text;
-            
-            // Hidden but technically visible to satisfy iOS security
-            input.style.position = "fixed";
-            input.style.top = "0";
-            input.style.left = "0";
-            input.style.width = "100px";
-            input.style.height = "100px";
-            input.style.opacity = "0";
-            input.style.pointerEvents = "none";
-            input.style.zIndex = "-1";
-            input.style.fontSize = "16px"; 
-            
-            document.body.appendChild(input);
-            input.focus();
-            input.select();
-            input.setSelectionRange(0, 999999);
-            
-            try {
-                document.execCommand('copy');
-            } catch (err) {
-                console.error('Fallback copy failed', err);
-            }
-            document.body.removeChild(input);
+
+        // --- NEW: Function to trigger the logo sheen ---
+        function triggerLogoSheenEffect() {
+            const logo = document.getElementById('main-logo');
+            if (!logo || logo.classList.contains('sheen-active')) return;
+
+            logo.classList.add('sheen-active');
+
+            // Remove class after animation length (0.8s) so it can be triggered again
+            setTimeout(() => {
+                logo.classList.remove('sheen-active');
+            }, 800);
         }
 
         // Spotlight Effect
@@ -595,10 +603,8 @@
         };
 
         const financeChars = "$0123456789,%#*@";
-        
         function scramble(element) {
             const originalText = element.dataset.value;
-            // Lock width to prevent layout jitter
             const rect = element.getBoundingClientRect();
             if(rect.width > 0) element.style.width = `${rect.width}px`; 
             element.style.textAlign = 'left'; 
