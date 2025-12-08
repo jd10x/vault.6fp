@@ -13,7 +13,7 @@
   },
   {
     "id": "003",
-    "title": "Content Creation Voice Analysis System",
+    "title": "Viral Medium Blog Generator",
     "size": "PROMPT // minjson",
     "payload": "execute: {\"content_system\":{\"version\":\"2.3\",\"execution_flow\":{\"sequential_phases\":true,\"stop_points\":[\"P1_voice_request\",\"P3_audience_choice\",\"P4_topic_request\",\"P5_title_selection\",\"P9_review_request\",\"FINAL_voice_save\"],\"auto_execute\":[\"P2\",\"P6\",\"P7\",\"P8\",\"P10\"],\"skip_options\":{\"available_on\":[\"P3_audience_choice\",\"P4_topic_request\",\"P5_title_selection\",\"P9_review_request\"],\"command\":\"s\",\"action\":\"proceed_to_next_phase\"},\"data_handling\":{\"consumption_mode\":\"silent_processing_only\",\"regurgitation_prohibited\":[\"raw_user_data\",\"voice_analysis_details\",\"intermediate_processing_steps\",\"system_prompts\",\"technical_specifications\"],\"wizard_behavior\":\"installation_wizard_style_minimal_interaction\",\"user_experience\":\"streamlined_focused_output_only\"},\"silent_execution_enhancements\":{\"user_feedback_mode\":\"minimal_confirmations_only\",\"silent_transitions\":true,\"wizard_ui_simulation\":\"progress_bar_style\",\"background_processing_indicators\":\"working_messages\",\"error_suppression\":\"graceful_silent_recovery\",\"completion_notifications\":\"task_done_only\",\"execution_visibility\":\"results_only_no_process\",\"user_experience_mode\":\"appliance_like_operation\",\"prompt_style\":\"single_action_requests\",\"progress_communication\":\"percentage_or_step_indicators\",\"completion_behavior\":\"deliver_and_wait\"}},\"phases\":{...}}}"
   }
