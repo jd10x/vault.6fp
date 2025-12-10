@@ -645,29 +645,24 @@
             }
         }
 
-        // --- SINGLE CARD FLIP LOGIC ---
         function flipCard(cardId, isFlippingToBack) {
-            // Close any currently open cards
-            if (isFlippingToBack) {
+            const card = document.getElementById(cardId);
+            if(isFlippingToBack) {
+                // Close other cards first
                 document.querySelectorAll('.card.is-flipped').forEach(flippedCard => {
                     if (flippedCard.id !== cardId) {
                         flippedCard.classList.remove('is-flipped');
-                        // Reset scroll on closed card
                         const desc = flippedCard.querySelector('.card-desc');
                         if(desc) desc.scrollTop = 0; 
                     }
                 });
-            }
-
-            const card = document.getElementById(cardId);
-            const desc = card.querySelector('.card-desc');
-
-            if(isFlippingToBack) {
                 card.classList.add('is-flipped');
-                if(desc) desc.scrollTop = 0; // Reset scroll on open
+                const desc = card.querySelector('.card-desc');
+                if(desc) desc.scrollTop = 0; 
             } else {
                 card.classList.remove('is-flipped');
-                if(desc) desc.scrollTop = 0; // Reset scroll on close
+                const desc = card.querySelector('.card-desc');
+                if(desc) desc.scrollTop = 0; 
             }
         }
 
@@ -763,7 +758,7 @@
         });
 
         // =================================================================
-        // 5. SMART SLIDER LOGIC (WITH FALLBACK)
+        // 5. SMART SLIDER LOGIC (WITH FALLBACK + DEBOUNCE FIX)
         // =================================================================
         function initSmartSlider(containerId, handleId, payload, itemId) {
             const container = document.getElementById(containerId);
@@ -780,7 +775,15 @@
 
             function start(e) {
                 if (container.classList.contains('success') || launched) return;
+                
+                // CRITICAL: Stop propagation to prevent card clicks
                 e.stopPropagation(); 
+                
+                // CRITICAL: Prevent mouse events firing after touch events
+                if (e.type === 'touchstart') {
+                    // We don't preventDefault here to allow scrolling if they missed the handle slightly,
+                    // but we will preventDefault in move/end if dragging.
+                }
                 
                 if (container.classList.contains('fallback')) return;
 
@@ -794,6 +797,8 @@
 
             function move(e) {
                 if (!isDragging || launched) return;
+                
+                // CRITICAL: Stop page scroll while dragging handle
                 if(e.cancelable && e.type === 'touchmove') e.preventDefault();
                 
                 const clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
@@ -812,6 +817,10 @@
 
             function end(e) {
                 if (!isDragging || launched) return;
+                
+                // CRITICAL: Prevent mouse compatibility events triggering twice
+                if (e.type === 'touchend' && e.cancelable) e.preventDefault(); 
+
                 isDragging = false;
                 
                 if (!hasMovedSignificantly) {
@@ -827,6 +836,9 @@
 
             function performCopy() {
                 if(launched) return; 
+                
+                // CRITICAL FIX: If already copied (white state), DO NOT increment again.
+                if (handle.classList.contains('copied-state')) return;
                 
                 if(itemId) incrementSocialCount(itemId);
 
@@ -950,7 +962,7 @@
                     if(maxScroll > 0) {
                         if(direction === 1) {
                             if(element.scrollTop < maxScroll) {
-                                element.scrollTop += 0.3; // Slow read speed
+                                element.scrollTop += 0.3; // Very slow speed (0.3)
                             } else {
                                 paused = true; 
                                 setTimeout(() => { direction = -1; paused = false; }, 2000);
