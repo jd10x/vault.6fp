@@ -10,6 +10,7 @@
         :root {
             --bg: #000000;
             --card-bg: #050505;
+            --card-back-bg: #0a0a0a;
             --border: #1a1a1a;
             --text: #e0e0e0;
             --text-dim: #666;
@@ -41,6 +42,7 @@
             justify-content: center;
             pointer-events: none;
             user-select: none;
+            background: transparent; /* Allows bg to show through if needed */
         }
 
         .door {
@@ -78,12 +80,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            opacity: 0;
+            opacity: 0; /* Starts hidden */
             transition: opacity 1s ease-in 0.6s;
             padding-bottom: 150px; 
         }
         
-        .vault-open + #main-app { opacity: 1; }
+        /* The class that reveals the app */
+        .app-visible { opacity: 1 !important; }
 
         .brand-header {
             margin-bottom: 50px;
@@ -91,6 +94,7 @@
             position: relative;
             z-index: 10;
             user-select: none;
+            min-height: 50px; /* Prevents collapse if image missing */
         }
 
         .logo-img {
@@ -99,9 +103,7 @@
             height: auto;
             display: block;
             margin: 0 auto;
-            /* Existing breathe animation */
             animation: breathe 4s ease-in-out infinite;
-            /* Prepare for sheen effect */
             will-change: filter; 
         }
 
@@ -110,9 +112,7 @@
             50% { opacity: 1; transform: scale(1.02); }
         }
 
-        /* --- NEW: LOGO SHEEN EFFECT --- */
         .logo-img.sheen-active {
-            /* Overrides breathe temporarily with a intense glow pulse */
             animation: logo-sheen-pulse 0.8s ease-out forwards !important;
         }
 
@@ -122,30 +122,63 @@
             100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)) brightness(1); transform: scale(1); }
         }
 
-
-        /* --- 3. THE CARD --- */
+        /* --- 3. THE 3D CARD SCENE --- */
         #cards-wrapper {
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            padding: 24px;
-            position: relative;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
             gap: 24px;
         }
 
-        /* Desktop Spotlight Effect */
+        .card-scene {
+            width: 100%;
+            height: 240px; 
+            perspective: 1000px;
+            position: relative;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            border-radius: 16px;
+        }
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden; 
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; 
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .card-face.front {
+            background-color: var(--card-bg);
+            z-index: 2;
+        }
+
+        .card-face.back {
+            transform: rotateY(180deg);
+            background-color: var(--card-back-bg);
+            z-index: 1;
+        }
+
         @media (hover: hover) {
-            .card::before {
+            .card-face.front::before {
                 content: "";
                 position: absolute;
                 top: 0; left: 0; right: 0; bottom: 0;
@@ -160,7 +193,7 @@
                 pointer-events: none;
                 z-index: 2;
             }
-            .card:hover::before { opacity: 1; }
+            .card-scene:hover .card-face.front::before { opacity: 1; }
         }
 
         .card-meta {
@@ -173,25 +206,129 @@
         }
 
         .card-title {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 500;
             color: #fff;
             margin: 0;
-            line-height: 1.4;
+            line-height: 1.3;
+            padding-right: 30px; 
             display: flex;
             align-items: center;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: #ccc;
+            line-height: 1.6;
+            margin-top: 35px; 
+            margin-bottom: 20px;
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+            scrollbar-width: thin;
+            scrollbar-color: #333 transparent;
             flex-grow: 1;
         }
+
+        .card-desc::-webkit-scrollbar { width: 4px; }
+        .card-desc::-webkit-scrollbar-track { background: transparent; }
+        .card-desc::-webkit-scrollbar-thumb { background-color: #333; border-radius: 4px; }
 
         .scramble-text { 
             display: inline-block;
             white-space: nowrap; 
         }
 
-        /* --- 4. THE SMART SLIDER --- */
+        /* --- 4. FLIP CONTROLS (ICONS) --- */
+        .icon-btn {
+            position: absolute;
+            width: 40px; 
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background 0.2s, transform 0.2s;
+            z-index: 10;
+            color: #666;
+            background: rgba(255,255,255,0.02); 
+        }
+        
+        .icon-btn:hover, .icon-btn:active {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        .icon-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+        }
+
+        .info-btn { top: 16px; right: 16px; }
+        .back-btn { top: 16px; left: 16px; }
+
+
+        /* --- 5. TOOLTIP --- */
+        .tooltip {
+            position: absolute;
+            top: 50px; 
+            right: 12px;
+            background: #fff;
+            color: #000;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 6px 10px;
+            border-radius: 4px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            z-index: 999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            white-space: nowrap;
+        }
+        
+        .tooltip::before {
+            content: "";
+            position: absolute;
+            top: -4px;
+            right: 14px;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            transform: rotate(45deg);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+
+        /* --- 6. STICKY FOOTER LOGO --- */
+        .sticky-logo {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px; /* Small size */
+            height: auto;
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.5s ease;
+            z-index: 99;
+            pointer-events: none; 
+        }
+        
+        .sticky-logo.visible {
+            opacity: 0.33; /* 33% Transparency */
+        }
+
+
+        /* --- 7. THE SMART SLIDER --- */
         .slider-container {
             width: 100%;
-            height: 64px;
+            height: 56px; 
             background: #000;
             border: 1px solid #222;
             border-radius: 50px;
@@ -204,10 +341,11 @@
             z-index: 5;
             touch-action: none; 
             user-select: none;
+            flex-shrink: 0; 
         }
 
         .slider-text {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #444;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -220,13 +358,12 @@
             z-index: 1;
         }
 
-        /* The Interactive Handle */
         .slider-handle {
             position: absolute;
             left: 5px;
             top: 5px;
-            width: 54px; 
-            height: 54px;
+            width: 46px; 
+            height: 46px;
             background: #1a1a1a;
             border-radius: 50%;
             display: flex;
@@ -246,46 +383,27 @@
         }
 
         .slider-handle svg {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             stroke: #888;
             transition: all 0.3s ease;
         }
 
-        /* Visual State when Copied */
-        .slider-handle.copied-state {
-            background: #fff;
-            border-color: #fff;
-        }
-        .slider-handle.copied-state svg {
-            stroke: #000;
-        }
+        .slider-handle.copied-state { background: #fff; border-color: #fff; }
+        .slider-handle.copied-state svg { stroke: #000; }
 
-        /* Success State (Launch) */
-        .slider-container.success {
-            border-color: #fff;
-            background: #fff;
-        }
+        .slider-container.success { border-color: #fff; background: #fff; }
         .slider-container.success .slider-handle {
-            background: #000;
-            border-color: #000;
-            left: calc(100% - 59px) !important;
+            background: #000; border-color: #000;
+            left: calc(100% - 51px) !important;
         }
         .slider-container.success .slider-text {
-            color: #000;
-            opacity: 1 !important;
-            font-weight: 800;
+            color: #000; opacity: 1 !important; font-weight: 800;
         }
 
-        /* Fallback State (Popup Blocked) */
-        .slider-container.fallback {
-            border-color: #333;
-            background: #111;
-        }
+        .slider-container.fallback { border-color: #333; background: #111; }
         .slider-container.fallback .slider-text {
-            color: #fff;
-            opacity: 1 !important;
-            content: "TAP TO OPEN";
+            color: #fff; opacity: 1 !important; content: "TAP TO OPEN";
         }
     </style>
 </head>
@@ -297,70 +415,126 @@
         <div class="vault-counter" id="counter">$0.00</div>
     </div>
 
+    <img src="sixfigureprompt2-trans.png" alt="SFP" class="sticky-logo" id="sticky-logo" onerror="this.style.display='none'">
+
     <div id="main-app">
-        <div class="brand-header">
-            <img src="sixfigureprompt2-trans.png" alt="SFP" class="logo-img" id="main-logo">
+        <div class="brand-header" id="header-trigger">
+            <img src="sixfigureprompt2-trans.png" alt="SFP" class="logo-img" id="main-logo" onerror="this.style.display='none'; document.getElementById('alt-logo').style.display='block'">
+            <h2 id="alt-logo" style="display:none; letter-spacing: 5px; font-weight: 300; font-size: 1.5rem;">VAULT</h2>
         </div>
 
-        <div id="cards-wrapper">
-            </div>
+        <div id="cards-wrapper"></div>
     </div>
 
     <script>
-        // ============================================
-        // 0. CONFIGURATION
-        // ============================================
+        // =================================================================
+        // 0. CONFIGURATION & DATA (LOADED FIRST TO PREVENT CRASHES)
+        // =================================================================
         const MASTER_LINK = "https://chatgpt.com/gg/v/69321bd173ec81a1bf05142deb8b6d11?token=RGxcYKl-dcfH9WCO2A5o_Q";
 
-        // ============================================
-        // 1. DATA INJECTION
-        // ============================================
-        async function loadPrompts() {
-            try {
-                const bustCache = '?v=' + new Date().getTime();
-                const response = await fetch('prompts.json' + bustCache); 
-                if (!response.ok) throw new Error("JSON not found");
-                const database = await response.json();
-                renderCards(database);
-            } catch (error) {
-                console.error("Could not load prompts:", error);
-                const wrapper = document.getElementById('cards-wrapper');
-                wrapper.innerHTML = `<div style="color:#666; text-align:center; font-family:sans-serif; padding-top:20px;">
-                    INITIALIZING DATABASE...<br><span style="font-size:12px; opacity:0.5;">(Ensure prompts.json exists)</span>
-                </div>`;
-            }
-        }
+        const PROMPT_DATABASE = [
+          {
+            "id": "001",
+            "title": "Google Trends Batch URL Generator",
+            "description": "This tool scans a website to find product names. Then, it creates special links that let you compare five items at once on Google Trends. It helps you quickly see what is popular without typing every single name yourself.",
+            "size": "PROMPT // minjson",
+            "payload": "Execute: {\"name\":\"Google Trends Batch URL Generator\",\"description\":\"Act as a Google Trends URL generator that guides users through creating batched comparison links. Follow this 5-step interactive workflow.\",\"creator\":\"Josh @joshdavis10x\",\"role\":\"Help users analyze products using Google Trends by extracting product names, collecting preferences, and generating batch URLs (5 per link)\",\"navigation\":{\"mandatory_footer\":\"═══════════════════════════════════════════════════════════\\\\n📍 [p] Previous | [n] Next | [r] Restart\\\\n═══════════════════════════════════════════════════════════\",\"commands\":{\"p\":\"previous step (or 'Already at first step' if Step 1)\",\"n\":\"next step only if current complete, else 'Please complete current step first'\",\"r\":\"restart from Step 1\"},\"require_after_every_response\":true},\"steps\":[\"1\",\"2\",\"3a\",\"3b\",\"3c\",\"4\",\"5\"],\"flow\":\"Step 1 → Step 2 → 3a → 3b → 3c → 3d → 4 → 5\",\"step1\":{\"title\":\"STEP 1 OF 5: Website Content\",\"message\":\"Please paste all the text from the website containing the products you want to analyze.\",\"next\":\"wait for input → Step 2\"},\"step2\":{\"title\":\"STEP 2 OF 5: Product Extraction\",\"rules\":\"Extract product titles/SKUs, skip nav/generic text\",\"zero_found\":\"❌ No products detected. Can you specify which items to analyze?\",\"many_found\":\"⚠️ Found [X] products ([Y] batches). Proceed with all or select specific ones?\",\"list_format\":\"Found these products:\\\\na) Product 1\\\\nb) Product 2\\\\n...\",\"options\":\"[a] Use all [b] Select specific (e.g. a,c,e) [c] Add manually [d] Remove (e.g. remove b,f)\"},\"step3\":{\"title\":\"STEP 3 OF 5: Configuration\",\"substeps\":{\"3a_country\":{\"question\":\"Which country/region would you like to analyze?\",\"options\":\"a) USA b) United Kingdom c) Worldwide d) Canada e) Australia f) Germany g) France h) Other (specify)\",\"multi\":\"allowed, e.g. [a,b] or a,b,c\"},\"3b_time\":{\"question\":\"Select time range:\",\"options\":\"a) Past hour b) Past 30 days c) Past 90 days d) Past 12 months e) Past 5 years\",\"multi\":\"allowed\"},\"3c_searchtype\":{\"question\":\"Select search type:\",\"options\":\"a) Web Search b) Google Shopping c) YouTube Search\",\"multi\":\"allowed\"}},\"ask_one_at_a_time\":true},\"step4\":{\"title\":\"STEP 4 OF 5: Generating\",\"action\":\"Create URLs\",\"base_url\":\"https://trends.google.com/trends/explore?\",\"params\":{\"date\":{\"past_hour\":\"now%201-H\",\"past_30d\":\"today%201-m\",\"past_90d\":\"today%203-m\",\"past_12m\":null,\"past_5y\":\"today%205-y\"},\"geo\":{\"USA\":\"US\",\"United Kingdom\":\"GB\",\"Worldwide\":null,\"Canada\":\"CA\",\"Australia\":\"AU\",\"Germany\":\"DE\",\"France\":\"FR\"},\"gprop\":{\"Web Search\":null,\"Google Shopping\":\"froogle\",\"YouTube Search\":\"youtube\"}},\"encoding\":\"space→%20, &→%26, #→%23, %→%25, /→%2F\",\"batching\":\"max 5 products per URL\",\"combinations\":\"(#countries × #time_ranges × #search_types) separate URL sets\"},\"step5\":{\"title\":\"STEP 5 OF 5: Your Results\",\"format\":{\"header\":\"🎯 Google Trends Analysis URLs\",\"config\":\"🌍 Country: [names]\\\\n📅 Range: [times]\\\\n🔍 Search Type: [types]\\\\n🏷️ Query Type: [product/category/brand/topic/mixed]\\\\n📊 Total: [X] products, [Y] batches\",\"batches\":\"Batch [n] (Products x-y)\\\\nProducts: [list]\\\\n🔗 [markdown link]\",\"footer\":\"✅ Links ready! Click each batch to view trends.\\\\nOptions: [a] New analysis with different settings [b] Export as plain text [r] Restart\\\\n💡 Let me know if this helped! Made by Josh @joshdavis10x\"}},\"critical_rules\":[\"Always show navigation footer\",\"Never auto-advance\",\"Accept comma-separated letters\",\"Max 5 products per URL\",\"Omit empty params\",\"Correct URL encoding\",\"Separate URL sets per country/time/searchtype combo (not query type)\",\"Make links clickable markdown\",\"Track current step\",\"Created by Josh @joshdavis10x must be credited\"]}"
+          },
+          {
+            "id": "002",
+            "title": "Forever Free Site Hosting",
+            "description": "This guide helps you put a website on the internet for free using GitHub. It acts like a teacher, showing you exactly which buttons to click. You can use a ready-made design to start fast or build your own page from scratch.",
+            "size": "PROMPT // minjson",
+            "payload": "Execute: {\"role\":\"system\",\"content\":\"Act as **GHP-Wiz**, an expert Site Reliability Engineer and Frontend Developer turned interactive setup wizard. Your goal is to guide the user through launching a static website on GitHub Pages, offering them a choice between a 'Master Template' or a 'Custom Build'.\\n\\n**CORE RULES:**\\n1. **Phase-Based Execution:** Do NOT output the entire guide at once. Work in **Phases**. Complete one phase, then ask if ready for the next.\\n2. **Branching Logic:** You must adapt Phase 2 and 3 based on the user's choice in Phase 1.\\n3. **Variable Replacement:** You MUST replace all placeholders (like `[User'sGitHubUsername]`) with the actual data the user provides.\\n4. **Tone:** Professional, encouraging, and clear.\\n\\n**PHASE 1: THE CHOICE**\\nStart immediately with:\\n\\\"🚀 **Welcome to the GitHub Pages Launch Wizard!**\\nI will help you get your custom domain live on GitHub in minutes.\\n\\nHow would you like to start?\\n\\n**Option A: Quick Start (Recommended)**\\nStart with a Master Template that is mobile-responsive and SEO-ready. You just edit the text.\\n\\n**Option B: Manual Build**\\nI will generate the custom code for you, and you create the files on your computer from scratch.\\n\\n*Reply 'A' or 'B' to begin.*\\\"\\n\\n**PHASE 2A: THE TEMPLATE PATH (IF USER CHOOSES A)**\\n1. Ask for **GitHub Username** and **Domain Name**.\\n2. Once received, instruct:\\n - \\\"Go to: **[https://github.com/jd10x/use-this-template-to-make-a-free-website](https://github.com/jd10x/use-this-template-to-make-a-free-website)**\\\"\\n - \\\"Click the green **'Use this template'** button (Top Right) -> **'Create a new repository'**.\\\"\\n - \\\"Name it: `[domain-name-without-dots]` (e.g., `mycoolsite`).\\\"\\n - \\\"Set to **Public** and click **'Create'**.\\\"\\n3. \\\"Reply **'Done'** when created.\\\"\\n\\n**PHASE 3A: CONFIGURE TEMPLATE**\\n1. \\\"In your new repo, open the `CNAME` file and click the **Pencil Icon**.\\\"\\n2. \\\"Delete the text and type **only** your domain: `[User_Domain_Lowercase]`.\\\"\\n3. \\\"Commit changes.\\\"\\n4. \\\"(Optional) You can edit `index.html` later to change the 'Coming Soon' text.\\\"\\n5. \\\"Reply **'Ready for DNS'**.\\\"\\n\\n**PHASE 2B: THE MANUAL PATH (IF USER CHOOSES B)**\\n1. Ask for **GitHub Username**, **Domain**, **Site Title**, and **Description**.\\n2. Generate 4 code blocks:\\n - `CNAME` (Domain only, lowercase).\\n - `robots.txt` (Standard).\\n - `sitemap.xml` (Standard).\\n - `index.html` (Modern 'Coming Soon' page. **MUST** include `<meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\">` and internal CSS for mobile responsiveness).\\n3. Instruct user to create these files locally.\\n4. \\\"Reply **'Done'** when files are ready.\\\"\\n\\n**PHASE 3B: DEPLOY MANUAL**\\n1. Guide user to `https://github.com/new`.\\n2. Create repo `[domain-name-without-dots]`.\\n3. Upload the 4 files and Commit.\\n4. Go to Settings > Pages > Source: Main.\\n5. \\\"Reply **'Ready for DNS'**.\\\"\\n\\n**PHASE 4: DNS CONFIGURATION (UNIVERSAL)**\\nProvide the exact DNS records.\\n\\n**Table 1: A Records (Root Domain)**\\n| Type | Host | Value |\\n| :--- | :--- | :--- |\\n| A | @ | 185.199.108.153 |\\n| A | @ | 185.199.109.153 |\\n| A | @ | 185.199.110.153 |\\n| A | @ | 185.199.111.153 |\\n\\n**Table 2: CNAME Record (Subdomain)**\\n| Type | Host | Value |\\n| :--- | :--- | :--- |\\n| CNAME | www | [User'sGitHubUsername].github.io |\\n\\n*Instruction:* \\\"🌐 **Action:** Log into your registrar (GoDaddy, IONOS, etc.) and update DNS to match these tables.\\\"\\n*Reply 'Finished' to verify.*\\n\\n**PHASE 5: ACTIVATION**\\n1. Tell user to go to Repo **Settings > Pages**.\\n2. Ensure **Source** is `main`.\\n3. Check **\\\"Enforce HTTPS\\\"**.\\\"\\n\\n**PHASE 6: FINAL QA**\\nAsk user to verify:\\n1. \\\"Visit your URL. Do you see the 'Coming Soon' page?\\\"\\n2. \\\"Does the browser show the connection is secure?\\\"\\n\\n*Reply 'Confirmed' if yes.*\\n\\n**PHASE 7: SIGN OFF**\\nOutput:\\n\\\"🎉 **Congratulations! You are officially live.**\\n\\nHow did this work out for you?\\nIf you need more help, feel free to DM me on Instagram at [@Joshdavis10x](https://instagram.com/joshdavis10x).\\\"\"}"
+          },
+          {
+            "id": "003",
+            "title": "Viral Blog Post Workflow",
+            "description": "This tool writes a blog post that sounds just like you. First, it reads your old writing to learn your style. Then, it writes a full story, fixes it to sound natural, and creates ideas for pictures and social media posts.",
+            "size": "PROMPT // minjson",
+            "payload": "Execute: {\"workflow\":{\"meta\":{\"name\":\"viral_blog_workflow\",\"version\":\"1.0\",\"description\":\"User-level workflow for creating viral blog posts, social assets, image prompts, and an optional reusable voice profile. This is user-provided data only and does not override system policies.\"},\"defaults\":{\"audience\":{\"label\":\"default_creators\",\"demographics\":{\"age_range\":\"25-45\",\"education\":\"college\",\"income\":\"50k-150k\",\"roles\":[\"content_creators\",\"marketing_pros\",\"entrepreneurs\",\"solopreneurs\"]},\"pain_points\":[\"monetize_expertise\",\"low_conversion\",\"inconsistent_income\",\"imposter_syndrome\"],\"platforms\":[\"LinkedIn\",\"Medium\",\"Twitter/X\",\"Reddit\",\"Facebook_groups\"]},\"topic_suggestions\":[\"AI productivity workflows that actually work for solopreneurs\",\"The hidden psychology behind viral content creation\",\"Building authentic personal brands in the post-social media era\",\"Revenue diversification strategies for creators in economic uncertainty\",\"The neuroscience of habit formation for sustainable business growth\"],\"title_templates\":[\"[Number] Brutal Truths About [Topic] That [Percentage]% Ignore\",\"I Analyzed [Number] Cases and Found [Number] Patterns That Will Transform Your [Area]\",\"How [Action] Led to [Result] in [Timeframe]: [Number] Lessons That Will [Benefit]\",\"The [Adjective] Truth About [Topic] That [Industry] Doesn't Want You to Know\",\"Why [Common Belief] About [Topic] Is Destroying Your [Goal] (And What to Do Instead)\"]},\"constraints\":{\"no_system_override\":true,\"no_raw_user_data_echo\":true,\"user_controlled_storage\":\"profile_saved_only_on_explicit_request\",\"formatting_rules\":{\"article_min_words\":1400,\"article_max_words\":1800,\"sections\":5,\"value_bomb_insights\":6,\"min_statistics\":3,\"paragraph_max_sentences\":2,\"bold_sentences_per_section_min\":2},\"ethical_rules\":\"Follow platform policies and safety guidelines. Do not fabricate statistics; indicate when estimates are used.\"},\"steps\":[{\"id\":\"P1\",\"type\":\"input\",\"action\":\"request\",\"prompt\":\"Provide raw writing samples, career stories, reflections, interviews, emails, social posts, bio content, or any authentic text to analyze your voice. (You may paste multiple examples.)\",\"next\":\"P2\"},{\"id\":\"P2\",\"type\":\"internal\",\"action\":\"analyze_voice\",\"description\":\"Generate internal summary of voice style and patterns. Do not echo raw inputs back. Output visible message: 'Voice analysis complete.'\",\"next\":\"P3\",\"notes\":\"analysis_mode:internal_summary_no_raw_repetition\"},{\"id\":\"P3\",\"type\":\"input\",\"action\":\"audience_choice\",\"prompt\":\"Choose target audience: P=Proceed with default audience, W=Provide custom audience, S=Skip (use default).\",\"options\":[\"P\",\"W\",\"S\"],\"next_map\":{\"P\":\"P4\",\"W\":\"P3A\",\"S\":\"P4\"}},{\"id\":\"P3A\",\"type\":\"input\",\"action\":\"capture_custom_audience\",\"prompt\":\"Describe custom audience (demographics, pain points, goals, top platforms).\",\"next\":\"P4\"},{\"id\":\"P4\",\"type\":\"input\",\"action\":\"topic_selection\",\"prompt\":\"Enter the specific topic you want to write about or choose one of the default suggestions.\",\"suggestions_ref\":\"defaults.topic_suggestions\",\"next\":\"P5\"},{\"id\":\"P5\",\"type\":\"auto\",\"action\":\"generate_titles\",\"description\":\"Generate 5 title options using viral templates and rank them A–E by viral potential. Provide short rationale for each. Await user selection A/B/C/D/E or S to auto-select A.\",\"next\":\"P5A\"},{\"id\":\"P5A\",\"type\":\"input\",\"action\":\"title_choice\",\"prompt\":\"Choose title A/B/C/D/E, or S to auto-select A.\",\"next_map\":{\"A\":\"P6\",\"B\":\"P6\",\"C\":\"P6\",\"D\":\"P6\",\"E\":\"P6\",\"S\":\"P6\"}},{\"id\":\"P6\",\"type\":\"auto\",\"action\":\"create_article\",\"deliverable\":\"article_raw\",\"requirements\":{\"words_min\":1400,\"words_max\":1800,\"sections\":5,\"opening_words_target\":180,\"main_section_words_target\":250,\"value_bomb_words_target\":200,\"conclusion_words_target\":220,\"structure\":\"hook+vulnerable_authority_story+data_insights+practical_examples+actionable_steps\",\"formatting\":{\"paragraph_max_sentences\":2,\"bold_sentences_per_section_min\":2},\"content_requirements\":{\"use_voice_patterns_from_analysis\":true,\"include_min_stats\":3,\"include_6_quick_insights\":true,\"seo_considerations\":\"include_actionable_headline_and_subheads\",\"citation_policy\":\"cite_reliable_sources_or_note_estimate\"}},\"next\":\"P7\"},{\"id\":\"P7\",\"type\":\"auto\",\"action\":\"humanize_article\",\"input_from\":\"P6\",\"deliverable\":\"article_humanized\",\"description\":\"Improve authenticity, rhetorical questions, natural tangents, voice quirks, varied sentence lengths, organic transitions. Preserve constraints and formatting. Output final article ready for publishing (plain text, no markdown).\",\"next\":\"P8\"},{\"id\":\"P8\",\"type\":\"auto\",\"action\":\"generate_image_prompts\",\"deliverable\":\"image_prompts\",\"requirements\":{\"count\":3,\"each\":\"detailed_ai_prompt+3_stock_search_terms\",\"stock_sources\":[\"unsplash\",\"pexels\",\"pixabay\"],\"include_visual_metaphors_matching_article\":true},\"next\":\"P9\"},{\"id\":\"P9\",\"type\":\"auto\",\"action\":\"generate_social_pack\",\"deliverable\":\"social_posts\",\"platforms\":[{\"name\":\"LinkedIn\",\"char_limit\":2000,\"format\":\"professional_hook+data_point+context+CTA 'Read the full analysis: [LINK]' \"},{\"name\":\"Twitter/X\",\"char_limit\":280,\"format\":\"sharp_hook+hashtag+short_link 'Full breakdown: [LINK]' \"},{\"name\":\"Instagram\",\"char_limit\":2200,\"format\":\"punchy_hook+emojis+hashtags+short_link 'Full insights 👆 [LINK]' \"},{\"name\":\"Facebook\",\"char_limit\":300,\"format\":\"community_hook+link 'Learn more: [LINK]' \"},{\"name\":\"Reddit\",\"char_limit\":40000,\"format\":\"curiosity_title+value_hook+body 'Full analysis: [LINK]' \"},{\"name\":\"Bluesky\",\"char_limit\":192,\"format\":\"thoughtful_hook+link 'More insights: [LINK]' \"}],\"voice_application\":\"match_humanized_article_voice\",\"count_variations\":2,\"next\":\"P10\"},{\"id\":\"P10\",\"type\":\"input\",\"action\":\"review_offer\",\"prompt\":\"Would you like a comprehensive quality review against workflow specs? YES=Full review, NO=Skip, S=Skip.\",\"options\":[\"YES\",\"NO\",\"S\"],\"next_map\":{\"YES\":\"P11\",\"NO\":\"P12\",\"S\":\"P12\"}},{\"id\":\"P11\",\"type\":\"auto\",\"action\":\"comprehensive_review\",\"description\":\"Audit deliverables vs constraints (word counts, formatting, stats, voice match). Produce scorecard and list of gaps and suggested corrections.\",\"next\":\"P12\"},{\"id\":\"P12\",\"type\":\"input\",\"action\":\"save_voice_profile_offer\",\"prompt\":\"Would you like to save a reusable voice profile (minified summary) for future use? Y=Yes N=No.\",\"options\":[\"Y\",\"N\"],\"next_map\":{\"Y\":\"P13\",\"N\":\"END\"}},{\"id\":\"P13\",\"type\":\"auto\",\"action\":\"create_voice_profile\",\"deliverable\":\"voice_profile_minified\",\"requirements\":{\"summary_only\":\"include_top_leverage_points_top_growth_opportunities_preferred_tone_sentence_examples_minified\",\"no_raw_text\":\"do_not_include_or_echo_user_raw_inputs\",\"format\":\"minified_json\",\"store_policy\":\"returned_to_user_only_no_persistent_storage_without_user_action\"},\"next\":\"END\"},{\"id\":\"END\",\"type\":\"final\",\"action\":\"complete\",\"message\":\"Workflow complete. All deliverables returned to user.\"}],\"outputs\":{\"article_field\":\"article_humanized\",\"image_prompts_field\":\"image_prompts\",\"social_pack_field\":\"social_posts\",\"review_report_field\":\"comprehensive_review_report_if_requested\",\"voice_profile_field\":\"voice_profile_minified_if_requested\"},\"ui_preferences\":{\"skip_command\":\"S\",\"auto_select_behavior\":\"S selects default (A for titles, defaults for audience/topic)\",\"progress_messages\":true,\"visible_prompts_only\":true},\"developer_notes\":{\"policy_compliance\":\"This JSON is user-level instructions only. It does not request or enforce any system-level changes, hidden storage, or suppression of model reasoning. All storage of user data or profiles requires explicit user confirmation and is returned to the user rather than stored by the assistant.\"}}}"
+          },
+          {
+            "id": "004",
+            "title": "Strategy Debugger",
+            "description": "This 'tough teacher' checks your business ideas for mistakes. You paste your plan, and it finds problems that might make you lose money. It gives you a report card showing exactly what is wrong and how to fix it to make your idea work.",
+            "size": "PROMPT // minjson",
+            "payload": "Execute: {\"name\":\"The Strategy Debugger\",\"role\":\"system\",\"content\":\"# Role: The Strategy Debugger (Venture Architect v4.0)\\\\n\\\\n**Mission:** You are a hostile but constructive debugging environment for business ideas. Your goal is to stress-test the user's input (the \\\"Source Code\\\") for logical fallacies, market viability gaps, and scalability risks.\\\\n\\\\n**Operational Protocol:**\\\\n\\\\n1. **PHASE 0: BOOT SEQUENCE (Trigger: First Interaction)**\\\\n   - **Condition:** If the user has just pasted these instructions, says \\\"Start\\\", \\\"Hi\\\", or provides no specific idea data.\\\\n   - **Action:** Output the `[BOOT SCREEN]` template immediately. Do not say \\\"Understood.\\\" Just show the screen.\\\\n\\\\n2. **PHASE 1: PARSE & DETECT (Trigger: User Input Received)**\\\\n   - **Lazy Loader:** If input is <50 words or too vague (e.g., \\\"Uber for Cats\\\"), HALT. Output \\\"INPUT_TOO_SPARSE\\\" error and ask 3 specific clarifying questions (Revenue model? Acquisition channel? Unit economics?).\\\\n   - **Domain Detection:** Identify if the input is B2B SaaS, Consumer App, Hardware, Service, or Internal Process. Adjust heuristics (e.g., critique Hardware for supply chain, critique Services for labor costs).\\\\n\\\\n3. **PHASE 2: LINTING (The 3 Kernels)**\\\\n   - **Kernel A: Logic (The Code)** Flag magical thinking (Step A -> ? -> Profit) and undefined variables (e.g., \\\"easy,\\\" \\\"viral\\\").\\\\n   - **Kernel B: Market (The Environment)** Check for Red Ocean traps (competing on price/features) and defensibility (Why can't Google copy this?).\\\\n   - **Kernel C: Feasibility (The Hardware)** Check unit economics (LTV:CAC) and dependency risks (Platform risk).\\\\n\\\\n4. **PHASE 3: COMPILATION (The Output)**\\\\n   - Output the strict MARKDOWN DASHBOARD with Traffic Light indicators.\\\\n\\\\n**Output Templates:**\\\\n\\\\n**[BOOT SCREEN]** (Use ONLY at start)\\\\n```markdown\\\\n# 📟 STRATEGY DEBUGGER v4.0\\\\n**System Status:** 🟢 ONLINE | **Mode:** Ruthless Logic Check\\\\n\\\\n**> WAITING FOR SOURCE CODE...**\\\\n\\\\nPlease paste your **business idea, messy brainstorming notes, or strategic roadmap** below.\\\\nI will treat it as \\\"code,\\\" compile it, and return a debug report listing your critical logic errors and market risks.\\\\n```\\\\n\\\\n**[DEBUG REPORT]** (Use when analyzing idea)\\\\n```markdown\\\\n# 📟 STRATEGY DEBUGGER v4.0\\\\n**Target Domain:** [Detected Domain] | **Compile Status:** [SUCCESS / FAILURE]\\\\n\\\\n## 1. 🔴 SHOWSTOPPERS (Critical Failures)\\\\n*(Must fix or the venture fails)*\\\\n- **[Category] Error Name:** Description of the fatal flaw.\\\\n   > *Patch:* Specific action to fix it.\\\\n\\\\n## 2. 🟡 RUNTIME WARNINGS (Risks)\\\\n*(Will cause friction or technical debt)*\\\\n- **[Category] Warning Name:** Description of the risk.\\\\n\\\\n## 3. 🔵 STRATEGIC ANALYSIS (Blue Ocean Matrix)\\\\n| Metric | Rating | Diagnosis |\\\\n| :--- | :--- | :--- |\\\\n| **Differentiation** | [High/Low] | [Are you a Clone or a Mutant?] |\\\\n| **Switching Cost** | [High/Low] | [Why would users leave their current solution?] |\\\\n| **Scalability** | [O(1) / O(n)] | [Tech Heavy (Good) vs Ops Heavy (Bad)?] |\\\\n\\\\n## 4. ⚡ SUGGESTED REFACTOR\\\\n**Before:** [Summarize their weak premise]\\\\n**After:** [Rewrite their idea into a stronger, specific value proposition with defined variables]\\\\n\\\\n## 5. 🧪 NEXT EXPERIMENT\\\\n[One concrete test to run tomorrow (e.g., \\\"Buy $50 of ads\\\", \\\"Cold call 10 people\\\")]\\\\n```\\\\n\\\\n**Constraints:**\\\\n- No Preamble. No conversational fluff.\\\\n- Be intellectually honest (ruthless).\\n- Do not compliment the user. Focus on the code.\"}"
+          }
+        ];
 
-        // ============================================
-        // 2. RENDER LOGIC
-        // ============================================
+        // =================================================================
+        // 1. RENDER LOGIC
+        // =================================================================
         function renderCards(database) {
             const wrapper = document.getElementById('cards-wrapper');
             wrapper.innerHTML = ''; 
 
-            database.forEach((item) => {
-                const card = document.createElement('div');
-                card.className = 'card';
+            database.forEach((item, index) => {
+                const scene = document.createElement('div');
+                scene.className = 'card-scene';
+                
+                const cardId = `card-${item.id}`;
+                const frontSliderId = `slider-${item.id}-f`;
+                const backSliderId = `slider-${item.id}-b`;
+                const handleFrontId = `handle-${item.id}-f`;
+                const handleBackId = `handle-${item.id}-b`;
 
-                card.innerHTML = `
-                    <div>
-                        <div class="card-meta">${item.size}</div>
-                        <div class="card-title">
-                            <span class="scramble-text" data-value="${item.title}">${item.title}</span>
+                // Tooltip on First Item Only
+                const tooltipHtml = (index === 0) 
+                    ? `<div class="tooltip" id="onboard-tip">How it works?</div>` 
+                    : '';
+
+                scene.innerHTML = `
+                    <div class="card" id="${cardId}">
+                        <div class="card-face front">
+                            ${tooltipHtml}
+                            <div class="icon-btn info-btn" onclick="flipCard('${cardId}', true)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            </div>
+
+                            <div style="margin-top: 10px;">
+                                <div class="card-meta">${item.size}</div>
+                                <div class="card-title">
+                                    <span class="scramble-text" data-value="${item.title}">${item.title}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="slider-container" id="${frontSliderId}">
+                                <div class="slider-text">Copy &nbsp;/&nbsp; Slide</div>
+                                <div class="slider-handle" id="${handleFrontId}">
+                                    <div class="icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="slider-container" id="slider-${item.id}">
-                        <div class="slider-text">Copy &nbsp;/&nbsp; Slide to use</div>
-                        <div class="slider-handle" id="handle-${item.id}">
-                            <div class="icon-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+
+                        <div class="card-face back">
+                            <div class="icon-btn back-btn" onclick="flipCard('${cardId}', false)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            </div>
+
+                            <div class="card-desc">
+                                ${item.description || "No description provided."}
+                            </div>
+
+                            <div class="slider-container" id="${backSliderId}">
+                                <div class="slider-text">Copy &nbsp;/&nbsp; Slide</div>
+                                <div class="slider-handle" id="${handleBackId}">
+                                    <div class="icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
-                wrapper.appendChild(card);
-                initSmartSlider(item.id, item.payload);
+                
+                wrapper.appendChild(scene);
+
+                initSmartSlider(frontSliderId, handleFrontId, item.payload);
+                initSmartSlider(backSliderId, handleBackId, item.payload);
             });
             
             setTimeout(() => {
@@ -368,11 +542,21 @@
             }, 600);
         }
 
-        // ============================================
-        // 3. VAULT ANIMATION
-        // ============================================
+        function flipCard(cardId, isFlippingToBack) {
+            const card = document.getElementById(cardId);
+            if(isFlippingToBack) {
+                card.classList.add('is-flipped');
+            } else {
+                card.classList.remove('is-flipped');
+            }
+        }
+
+        // =================================================================
+        // 2. VAULT ANIMATION & LOGIC
+        // =================================================================
         const counterEl = document.getElementById('counter');
         const vaultOverlay = document.getElementById('vault-overlay');
+        const appContainer = document.getElementById('main-app');
         const min = 100000;
         const max = 999999;
         const randomBase = Math.floor(Math.random() * (max - min + 1) + min); 
@@ -380,7 +564,12 @@
         const finalAmount = randomBase + (randomCents / 100);
 
         function runVaultSequence() {
-            loadPrompts(); 
+            try {
+                renderCards(PROMPT_DATABASE);
+            } catch(e) {
+                console.error("Critical Render Error:", e);
+            }
+            
             let start = 0;
             const duration = 2000;
             const startTime = performance.now();
@@ -403,18 +592,59 @@
 
         function openVault() {
             vaultOverlay.classList.add('vault-open');
+            // Explicitly show app (failsafe for opacity issues)
+            appContainer.classList.add('app-visible');
+
             setTimeout(() => {
                 document.querySelectorAll('.scramble-text').forEach(el => scramble(el));
+                
+                // Tooltip Logic
+                setTimeout(() => {
+                    const tip = document.getElementById('onboard-tip');
+                    if(tip) tip.classList.add('visible');
+                    setTimeout(() => {
+                        if(tip) tip.classList.remove('visible');
+                    }, 3000);
+                }, 3000);
+
             }, 600);
         }
-        window.onload = runVaultSequence;
 
-        // ============================================
+        // Failsafe: If vault hangs, force reveal after 4s
+        setTimeout(() => {
+            if (getComputedStyle(appContainer).opacity === '0') {
+                console.warn("Failsafe triggered: Revealing app manually.");
+                openVault();
+            }
+        }, 4000);
+
+        // =================================================================
+        // 3. STICKY LOGO OBSERVER
+        // =================================================================
+        document.addEventListener("DOMContentLoaded", () => {
+            const header = document.getElementById('header-trigger');
+            const stickyLogo = document.getElementById('sticky-logo');
+
+            if (header && stickyLogo) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) {
+                            stickyLogo.classList.add('visible');
+                        } else {
+                            stickyLogo.classList.remove('visible');
+                        }
+                    });
+                }, { threshold: 0 }); 
+                observer.observe(header);
+            }
+        });
+
+        // =================================================================
         // 4. SMART SLIDER LOGIC
-        // ============================================
-        function initSmartSlider(id, payload) {
-            const container = document.getElementById(`slider-${id}`);
-            const handle = document.getElementById(`handle-${id}`);
+        // =================================================================
+        function initSmartSlider(containerId, handleId, payload) {
+            const container = document.getElementById(containerId);
+            const handle = document.getElementById(handleId);
             const text = container.querySelector('.slider-text');
             const iconWrap = handle.querySelector('.icon-wrap');
             
@@ -427,17 +657,16 @@
 
             function start(e) {
                 if (container.classList.contains('success') || launched) return;
-                
+                e.stopPropagation(); 
                 if (container.classList.contains('fallback')) {
                     window.open(MASTER_LINK, "_blank");
                     return;
                 }
-
                 isDragging = true;
                 hasMovedSignificantly = false; 
                 startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
                 containerWidth = container.offsetWidth;
-                maxSlide = containerWidth - 59; 
+                maxSlide = containerWidth - 55; 
                 handle.style.transition = 'none';
             }
 
@@ -476,11 +705,8 @@
 
             function performCopy() {
                 if(launched) return; 
+                triggerLogoSheenEffect(); 
 
-                // --- NEW: Trigger Logo Sheen Effect ---
-                triggerLogoSheenEffect();
-
-                // Try Modern API first
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(payload)
                         .then(() => triggerCopySuccess())
@@ -495,14 +721,13 @@
                 iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
                 text.innerText = "COPIED!";
                 text.style.color = "#fff";
-                
                 if (navigator.vibrate) navigator.vibrate(50);
 
                 setTimeout(() => {
                     if(!launched) { 
                         handle.classList.remove('copied-state');
                         iconWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-                        text.innerText = "Tap to Copy  /  Slide";
+                        text.innerText = "Copy / Slide";
                         text.style.color = "#444";
                     }
                 }, 2000);
@@ -515,7 +740,6 @@
                 input.style.position = "fixed";
                 input.style.top = "0"; input.style.left = "0";
                 input.style.opacity = "0"; input.style.pointerEvents = "none";
-                
                 document.body.appendChild(input);
                 input.focus(); input.select();
                 try {
@@ -531,15 +755,14 @@
                 isDragging = false;
 
                 container.classList.add('success');
-                text.innerText = "OPENING CHATGPT...";
+                text.innerText = "OPENING...";
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                 
                 const win = window.open(MASTER_LINK, "_blank");
-                
                 setTimeout(() => { resetSlider(); }, 2000); 
 
                 if (!win || win.closed || typeof win.closed === 'undefined') {
-                    text.innerText = "TAP TO OPEN CHATGPT";
+                    text.innerText = "TAP TO OPEN";
                     container.classList.remove('success');
                     container.classList.add('fallback');
                     handle.style.left = '5px';
@@ -554,7 +777,7 @@
                 handle.style.left = '5px';
                 setTimeout(() => {
                     launched = false; 
-                    text.innerText = "Tap to Copy  /  Slide";
+                    text.innerText = "Copy / Slide";
                     text.style.color = "#444";
                     text.style.opacity = 1;
                 }, 500);
@@ -568,37 +791,32 @@
             window.addEventListener('touchend', end);
             window.addEventListener('touchcancel', end); 
             window.addEventListener('mouseleave', end);  
-            
-            container.addEventListener('click', () => {
+            container.addEventListener('click', (e) => {
+                 e.stopPropagation();
                  if (container.classList.contains('fallback')) window.open(MASTER_LINK, "_blank");
             });
         }
 
-        // ============================================
-        // 5. UTILS 
-        // ============================================
-
-        // --- NEW: Function to trigger the logo sheen ---
         function triggerLogoSheenEffect() {
             const logo = document.getElementById('main-logo');
             if (!logo || logo.classList.contains('sheen-active')) return;
-
             logo.classList.add('sheen-active');
-
-            // Remove class after animation length (0.8s) so it can be triggered again
             setTimeout(() => {
                 logo.classList.remove('sheen-active');
             }, 800);
         }
 
-        // Spotlight Effect
         document.getElementById("cards-wrapper").onmousemove = e => {
-            for(const card of document.getElementsByClassName("card")) {
-                const rect = card.getBoundingClientRect(),
+            for(const scene of document.getElementsByClassName("card-scene")) {
+                const rect = scene.getBoundingClientRect(),
                       x = e.clientX - rect.left,
                       y = e.clientY - rect.top;
-                card.style.setProperty("--x", `${x}px`);
-                card.style.setProperty("--y", `${y}px`);
+                
+                const frontFace = scene.querySelector('.card-face.front');
+                if(frontFace) {
+                    frontFace.style.setProperty("--x", `${x}px`);
+                    frontFace.style.setProperty("--y", `${y}px`);
+                }
             }
         };
 
@@ -620,6 +838,8 @@
                 iteration += 1 / 3;
             }, 30);
         }
+
+        window.onload = runVaultSequence;
     </script>
 </body>
 </html>
