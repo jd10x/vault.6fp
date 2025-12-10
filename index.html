@@ -21,6 +21,12 @@
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+        html {
+            /* Prevents white flash on iOS rubber-band scrolling */
+            background-color: var(--bg-bot); 
+            height: 100%;
+        }
+
         body {
             background: linear-gradient(to bottom, var(--bg-top) 0%, var(--bg-bot) 100%);
             background-attachment: fixed;
@@ -100,6 +106,7 @@
             position: relative;
             z-index: 10;
             user-select: none;
+            min-height: 50px;
         }
 
         .logo-wrapper {
@@ -115,7 +122,7 @@
             display: block;
             z-index: 2;
             will-change: transform;
-            /* Breathe + Slide Animation */
+            /* Breathe + Slide Animation loop */
             animation: breathe 4s ease-in-out infinite, logo-slide-left 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
 
@@ -127,46 +134,31 @@
             letter-spacing: 4px;
             opacity: 0;
             position: absolute;
-            left: 50%; /* Center relative to wrapper */
+            left: 50%; 
             transform: translateX(-50%);
             white-space: nowrap;
             z-index: 1;
-            /* Reveal Animation */
+            /* Reveal Animation loop */
             animation: text-reveal-right 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-
-        /* Logo Sheen Override */
-        .logo-img.sheen-active {
-            animation: logo-sheen-pulse 0.8s ease-out forwards !important;
         }
 
         /* --- ANIMATION KEYFRAMES --- */
         
-        /* 1. Breathe (Idle Pulse) */
         @keyframes breathe {
             0%, 100% { filter: brightness(1); }
             50% { filter: brightness(1.15); }
         }
 
-        /* 2. Logo Sliding */
         @keyframes logo-slide-left {
             0%, 10% { transform: translateX(0); }
-            20%, 50% { transform: translateX(-55px); } /* Move left to make room */
-            60%, 100% { transform: translateX(0); } /* Back to center */
+            20%, 50% { transform: translateX(-55px); } 
+            60%, 100% { transform: translateX(0); } 
         }
 
-        /* 3. Text Reveal */
         @keyframes text-reveal-right {
-            0%, 10% { opacity: 0; transform: translateX(-80px); } /* Hidden behind logo */
-            20%, 50% { opacity: 1; transform: translateX(45px); } /* Show to right */
-            60%, 100% { opacity: 0; transform: translateX(-80px); } /* Hide back into logo */
-        }
-
-        /* 4. Click Interaction Sheen */
-        @keyframes logo-sheen-pulse {
-            0% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)) brightness(1); }
-            40% { filter: drop-shadow(0 0 25px rgba(255,255,255,0.9)) brightness(1.3); transform: scale(1.05); }
-            100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)) brightness(1); transform: scale(1); }
+            0%, 10% { opacity: 0; transform: translateX(-80px); } 
+            20%, 50% { opacity: 1; transform: translateX(45px); } 
+            60%, 100% { opacity: 0; transform: translateX(-80px); } 
         }
 
         /* --- 3. THE 3D CARD SCENE --- */
@@ -179,7 +171,7 @@
 
         .card-scene {
             width: 100%;
-            height: 260px; 
+            height: 260px; /* 10/10 Mobile Compact Size */
             perspective: 1000px;
             position: relative;
         }
@@ -210,7 +202,7 @@
             justify-content: space-between; 
             overflow: hidden;
             border: 1px solid var(--border);
-            border-top: 1px solid #333;
+            border-top: 1px solid #333; /* Top edge sheen */
             box-shadow: 0 10px 40px -10px rgba(0,0,0,0.8);
         }
 
@@ -264,7 +256,8 @@
             padding-right: 35px; 
             display: flex;
             align-items: flex-start;
-            /* NON-WRAPPING LOGIC */
+            /* Allow long text to flow without wrap */
+            white-space: nowrap;
             overflow: hidden;
             max-width: 100%;
         }
@@ -302,8 +295,9 @@
             line-height: 1.6;
             margin-top: 40px; 
             margin-bottom: 20px;
-            overflow-y: scroll; 
+            overflow-y: scroll; /* Allows JS Auto Scroll */
             flex-grow: 1;
+            /* Hide Scrollbar */
             scrollbar-width: none; 
             -ms-overflow-style: none; 
             -webkit-overflow-scrolling: touch; 
@@ -312,7 +306,7 @@
 
         .scramble-text { 
             display: inline-block;
-            white-space: nowrap; /* Forces text to stretch across */
+            white-space: nowrap; 
         }
 
         /* --- 4. FLIP CONTROLS --- */
@@ -515,7 +509,7 @@
         // =================================================================
         // 1. DATA PERSISTENCE & SOCIAL PROOF LOGIC
         // =================================================================
-        const SESSION_KEY = "sf_vault_visited"; // Session key for this browser session
+        const SESSION_KEY = "sf_vault_visited"; 
 
         function getSocialCount(id) {
             let storage = JSON.parse(localStorage.getItem('sf_vault_stats')) || {};
@@ -651,12 +645,29 @@
             }
         }
 
+        // --- SINGLE CARD FLIP LOGIC ---
         function flipCard(cardId, isFlippingToBack) {
+            // Close any currently open cards
+            if (isFlippingToBack) {
+                document.querySelectorAll('.card.is-flipped').forEach(flippedCard => {
+                    if (flippedCard.id !== cardId) {
+                        flippedCard.classList.remove('is-flipped');
+                        // Reset scroll on closed card
+                        const desc = flippedCard.querySelector('.card-desc');
+                        if(desc) desc.scrollTop = 0; 
+                    }
+                });
+            }
+
             const card = document.getElementById(cardId);
+            const desc = card.querySelector('.card-desc');
+
             if(isFlippingToBack) {
                 card.classList.add('is-flipped');
+                if(desc) desc.scrollTop = 0; // Reset scroll on open
             } else {
                 card.classList.remove('is-flipped');
+                if(desc) desc.scrollTop = 0; // Reset scroll on close
             }
         }
 
@@ -681,8 +692,8 @@
             
             // Check Session
             if(sessionStorage.getItem(SESSION_KEY)) {
-                // RETURN VISITOR: Skip animations
-                counterEl.innerText = '$' + finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                // RETURN VISITOR: Hide Counter completely, Open Immediately
+                counterEl.style.display = 'none';
                 openVault(); 
             } else {
                 // NEW VISITOR: Run Animations
@@ -770,6 +781,7 @@
             function start(e) {
                 if (container.classList.contains('success') || launched) return;
                 e.stopPropagation(); 
+                
                 if (container.classList.contains('fallback')) return;
 
                 isDragging = true;
@@ -815,7 +827,6 @@
 
             function performCopy() {
                 if(launched) return; 
-                triggerLogoSheenEffect(); 
                 
                 if(itemId) incrementSocialCount(itemId);
 
@@ -939,7 +950,7 @@
                     if(maxScroll > 0) {
                         if(direction === 1) {
                             if(element.scrollTop < maxScroll) {
-                                element.scrollTop += 0.5; 
+                                element.scrollTop += 0.3; // Slow read speed
                             } else {
                                 paused = true; 
                                 setTimeout(() => { direction = -1; paused = false; }, 2000);
@@ -962,15 +973,6 @@
         // =================================================================
         // 7. VISUAL UTILS 
         // =================================================================
-        function triggerLogoSheenEffect() {
-            const logo = document.getElementById('main-logo');
-            if (!logo || logo.classList.contains('sheen-active')) return;
-            logo.classList.add('sheen-active');
-            setTimeout(() => {
-                logo.classList.remove('sheen-active');
-            }, 800);
-        }
-
         document.getElementById("cards-wrapper").onmousemove = e => {
             for(const scene of document.getElementsByClassName("card-scene")) {
                 const rect = scene.getBoundingClientRect(),
@@ -1031,7 +1033,7 @@
             "title": "Viral Blog Post Workflow",
             "description": "This tool writes a blog post that sounds just like you. First, it reads your old writing to learn your style. Then, it writes a full story, fixes it to sound natural, and creates ideas for pictures and social media posts.",
             "size": "PROMPT // minjson",
-            "payload": "Execute: {\"workflow\":{\"meta\":{\"name\":\"viral_blog_workflow\",\"version\":\"1.0\",\"description\":\"User-level workflow for creating viral blog posts, social assets, image prompts, and an optional reusable voice profile. This is user-provided data only and does not override system policies.\"},\"defaults\":{\"audience\":{\"label\":\"default_creators\",\"demographics\":{\"age_range\":\"25-45\",\"education\":\"college\",\"income\":\"50k-150k\",\"roles\":[\"content_creators\",\"marketing_pros\",\"entrepreneurs\",\"solopreneurs\"]},\"pain_points\":[\"monetize_expertise\",\"low_conversion\",\"inconsistent_income\",\"imposter_syndrome\"],\"platforms\":[\"LinkedIn\",\"Medium\",\"Twitter/X\",\"Reddit\",\"Facebook_groups\"]},\"topic_suggestions\":[\"AI productivity workflows that actually work for solopreneurs\",\"The hidden psychology behind viral content creation\",\"Building authentic personal brands in the post-social media era\",\"Revenue diversification strategies for creators in economic uncertainty\",\"The neuroscience of habit formation for sustainable business growth\"],\"title_templates\":[\"[Number] Brutal Truths About [Topic] That [Percentage]% Ignore\",\"I Analyzed [Number] Cases and Found [Number] Patterns That Will Transform Your [Area]\",\"How [Action] Led to [Result] in [Timeframe]: [Number] Lessons That Will [Benefit]\",\"The [Adjective] Truth About [Topic] That [Industry] Doesn't Want You to Know\",\"Why [Common Belief] About [Topic] Is Destroying Your [Goal] (And What to Do Instead)\"]},\"constraints\":{\"no_system_override\":true,\"no_raw_user_data_echo\":true,\"user_controlled_storage\":\"profile_saved_only_on_explicit_request\",\"formatting_rules\":{\"article_min_words\":1400,\"article_max_words\":1800,\"sections\":5,\"value_bomb_insights\":6,\"min_statistics\":3,\"paragraph_max_sentences\":2,\"bold_sentences_per_section_min\":2},\"ethical_rules\":\"Follow platform policies and safety guidelines. Do not fabricate statistics; indicate when estimates are used.\"},\"steps\":[{\"id\":\"P1\",\"type\":\"input\",\"action\":\"request\",\"prompt\":\"Provide raw writing samples, career stories, reflections, interviews, emails, social posts, bio content, or any authentic text to analyze your voice. (You may paste multiple examples.)\",\"next\":\"P2\"},{\"id\":\"P2\",\"type\":\"internal\",\"action\":\"analyze_voice\",\"description\":\"Generate internal summary of voice style and patterns. Do not echo raw inputs back. Output visible message: 'Voice analysis complete.'\",\"next\":\"P3\",\"notes\":\"analysis_mode:internal_summary_no_raw_repetition\"},{\"id\":\"P3\",\"type\":\"input\",\"action\":\"audience_choice\",\"prompt\":\"Choose target audience: P=Proceed with default audience, W=Provide custom audience, S=Skip (use default).\",\"options\":[\"P\",\"W\",\"S\"],\"next_map\":{\"P\":\"P4\",\"W\":\"P3A\",\"S\":\"P4\"}},{\"id\":\"P3A\",\"type\":\"input\",\"action\":\"capture_custom_audience\",\"prompt\":\"Describe custom audience (demographics, pain points, goals, top platforms).\",\"next\":\"P4\"},{\"id\":\"P4\",\"type\":\"input\",\"action\":\"topic_selection\",\"prompt\":\"Enter the specific topic you want to write about or choose one of the default suggestions.\",\"suggestions_ref\":\"defaults.topic_suggestions\",\"next\":\"P5\"},{\"id\":\"P5\",\"type\":\"auto\",\"action\":\"generate_titles\",\"description\":\"Generate 5 title options using viral templates and rank them A–E by viral potential. Provide short rationale for each. Await user selection A/B/C/D/E or S to auto-select A.\",\"next\":\"P5A\"},{\"id\":\"P5A\",\"type\":\"input\",\"action\":\"title_choice\",\"prompt\":\"Choose title A/B/C/D/E, or S to auto-select A.\",\"next_map\":{\"A\":\"P6\",\"B\":\"P6\",\"C\":\"P6\",\"D\":\"P6\",\"E\":\"P6\",\"S\":\"P6\"}},{\"id\":\"P6\",\"type\":\"auto\",\"action\":\"create_article\",\"deliverable\":\"article_raw\",\"requirements\":{\"words_min\":1400,\"words_max\":1800,\"sections\":5,\"opening_words_target\":180,\"main_section_words_target\":250,\"value_bomb_words_target\":200,\"conclusion_words_target\":220,\"structure\":\"hook+vulnerable_authority_story+data_insights+practical_examples+actionable_steps\",\"formatting\":{\"paragraph_max_sentences\":2,\"bold_sentences_per_section_min\":2},\"content_requirements\":{\"use_voice_patterns_from_analysis\":true,\"include_min_stats\":3,\"include_6_quick_insights\":true,\"seo_considerations\":\"include_actionable_headline_and_subheads\",\"citation_policy\":\"cite_reliable_sources_or_note_estimate\"}},\"next\":\"P7\"},{\"id\":\"P7\",\"type\":\"auto\",\"action\":\"humanize_article\",\"input_from\":\"P6\",\"deliverable\":\"article_humanized\",\"description\":\"Improve authenticity, rhetorical questions, natural tangents, voice quirks, varied sentence lengths, organic transitions. Preserve constraints and formatting. Output final article ready for publishing (plain text, no markdown).\",\"next\":\"P8\"},{\"id\":\"P8\",\"type\":\"auto\",\"action\":\"generate_image_prompts\",\"deliverable\":\"image_prompts\",\"requirements\":{\"count\":3,\"each\":\"detailed_ai_prompt+3_stock_search_terms\",\"stock_sources\":[\"unsplash\",\"pexels\",\"pixabay\"],\"include_visual_metaphors_matching_article\":true},\"next\":\"P9\"},{\"id\":\"P9\",\"type\":\"auto\",\"action\":\"generate_social_pack\",\"deliverable\":\"social_posts\",\"platforms\":[{\"name\":\"LinkedIn\",\"char_limit\":2000,\"format\":\"professional_hook+data_point+context+CTA 'Read the full analysis: [LINK]' \"},{\"name\":\"Twitter/X\",\"char_limit\":280,\"format\":\"sharp_hook+hashtag+short_link 'Full breakdown: [LINK]' \"},{\"name\":\"Instagram\",\"char_limit\":2200,\"format\":\"punchy_hook+emojis+hashtags+short_link 'Full insights 👆 [LINK]' \"},{\"name\":\"Facebook\",\"char_limit\":300,\"format\":\"community_hook+link 'Learn more: [LINK]' \"},{\"name\":\"Reddit\",\"char_limit\":40000,\"format\":\"curiosity_title+value_hook+body 'Full analysis: [LINK]' \"},{\"name\":\"Bluesky\",\"char_limit\":192,\"format\":\"thoughtful_hook+link 'More insights: [LINK]' \"}],\"voice_application\":\"match_humanized_article_voice\",\"count_variations\":2,\"next\":\"P10\"},{\"id\":\"P10\",\"type\":\"input\",\"action\":\"review_offer\",\"prompt\":\"Would you like a comprehensive quality review against workflow specs? YES=Full review, NO=Skip, S=Skip.\",\"options\":[\"YES\",\"NO\",\"S\"],\"next_map\":{\"YES\":\"P11\",\"NO\":\"P12\",\"S\":\"P12\"}},{\"id\":\"P11\",\"type\":\"auto\",\"action\":\"comprehensive_review\",\"description\":\"Audit deliverables vs constraints (word counts, formatting, stats, voice match). Produce scorecard and list of gaps and suggested corrections.\",\"next\":\"P12\"},{\"id\":\"P12\",\"type\":\"input\",\"action\":\"save_voice_profile_offer\",\"prompt\":\"Would you like to save a reusable voice profile (minified summary) for future use? Y=Yes N=No.\",\"options\":[\"Y\",\"N\"],\"next_map\":{\"Y\":\"P13\",\"N\":\"END\"}},{\"id\":\"P13\",\"type\":\"auto\",\"action\":\"create_voice_profile\",\"deliverable\":\"voice_profile_minified\",\"requirements\":{\"summary_only\":\"include_top_leverage_points_top_growth_opportunities_preferred_tone_sentence_examples_minified\",\"no_raw_text\":\"do_not_include_or_echo_user_raw_inputs\",\"format\":\"minified_json\",\"store_policy\":\"returned_to_user_only_no_persistent_storage_without_user_action\"},\"next\":\"END\"},{\"id\":\"END\",\"type\":\"final\",\"action\":\"complete\",\"message\":\"Workflow complete. All deliverables returned to user.\"}],\"outputs\":{\"article_field\":\"article_humanized\",\"image_prompts_field\":\"image_prompts\",\"social_pack_field\":\"social_posts\",\"review_report_field\":\"comprehensive_review_report_if_requested\",\"voice_profile_field\":\"voice_profile_minified_if_requested\"},\"ui_preferences\":{\"skip_command\":\"S\",\"auto_select_behavior\":\"S selects default (A for titles, defaults for audience/topic)\",\"progress_messages\":true,\"visible_prompts_only\":true},\"developer_notes\":{\"policy_compliance\":\"This JSON is user-level instructions only. It does not request or enforce any system-level changes, hidden storage, or suppression of model reasoning. All storage of user data or profiles requires explicit user confirmation and is returned to the user rather than stored by the assistant.\"}}}"
+            "payload": "Execute: {\"workflow\":{\"meta\":{\"name\":\"viral_blog_workflow\",\"version\":\"1.0\",\"description\":\"User-level workflow for creating viral blog posts, social assets, image prompts, and an optional reusable voice profile. This is user-provided data only and does not override system policies.\"},\"defaults\":{\"audience\":{\"label\":\"default_creators\",\"demographics\":{\"age_range\":\"25-45\",\"education\":\"college\",\"income\":\"50k-150k\",\"roles\":[\"content_creators\",\"marketing_pros\",\"entrepreneurs\",\"solopreneurs\"]},\"pain_points\":[\"monetize_expertise\",\"low_conversion\",\"inconsistent_income\",\"imposter_syndrome\"],\"platforms\":[\"LinkedIn\",\"Medium\",\"Twitter/X\",\"Reddit\",\"Facebook_groups\"]},\"topic_suggestions\":[\"AI productivity workflows that actually work for solopreneurs\",\"The hidden psychology behind viral content creation\",\"Building authentic personal brands in the post-social media era\",\"Revenue diversification strategies for creators in economic uncertainty\",\"The neuroscience of habit formation for sustainable business growth\"],\"title_templates\":[\"[Number] Brutal Truths About [Topic] That [Percentage]% Ignore\",\"I Analyzed [Number] Cases and Found [Number] Patterns That Will Transform Your [Area]\",\"How [Action] Led to [Result] in [Timeframe]: [Number] Lessons That Will [Benefit]\",\"The [Adjective] Truth About [Topic] That [Industry] Doesn't Want You to Know\",\"Why [Common Belief] About [Topic] Is Destroying Your [Goal] (And What to Do Instead)\"]},\"constraints\":{\"no_system_override\":true,\"no_raw_user_data_echo\":true,\"user_controlled_storage\":\"profile_saved_only_on_explicit_request\",\"formatting_rules\":{\"article_min_words\":1400,\"article_max_words\":1800,\"sections\":5,\"value_bomb_insights\":6,\"min_statistics\":3,\"paragraph_max_sentences\":2,\"bold_sentences_per_section_min\":2},\"ethical_rules\":\"Follow platform policies and safety guidelines. Do not fabricate statistics; indicate when estimates are used.\"},\"steps\":[{\"id\":\"P1\",\"type\":\"input\",\"action\":\"request\",\"prompt\":\"Provide raw writing samples, career stories, reflections, interviews, emails, social posts, bio content, or any authentic text to analyze your voice. (You may paste multiple examples.)\",\"next\":\"P2\"},{\"id\":\"P2\",\"type\":\"internal\",\"action\":\"analyze_voice\",\"description\":\"Generate internal summary of voice style and patterns. Do not echo raw inputs back. Output visible message: 'Voice analysis complete.'\",\"next\":\"P3\",\"notes\":\"analysis_mode:internal_summary_no_raw_repetition\"},{\"id\":\"P3\",\"type\":\"input\",\"action\":\"audience_choice\",\"prompt\":\"Choose target audience: P=Proceed with default audience, W=Provide custom audience, S=Skip (use default).\",\"options\":[\"P\",\"W\",\"S\"],\"next_map\":{\"P\":\"P4\",\"W\":\"P3A\",\"S\":\"P4\"}},{\"id\":\"P3A\",\"type\":\"input\",\"action\":\"capture_custom_audience\",\"prompt\":\"Describe custom audience (demographics, pain points, goals, top platforms).\",\"next\":\"P4\"},{\"id\":\"P4\",\"type\":\"input\",\"action\":\"topic_selection\",\"prompt\":\"Enter the specific topic you want to write about or choose one of the default suggestions.\",\"suggestions_ref\":\"defaults.topic_suggestions\",\"next\":\"P5\"},{\"id\":\"P5\",\"type\":\"auto\",\"action\":\"generate_titles\",\"description\":\"Generate 5 title options using viral templates and rank them A–E by viral potential. Provide short rationale for each. Await user selection A/B/C/D/E or S to auto-select A.\",\"next\":\"P5A\"},{\"id\":\"P5A\",\"type\":\"input\",\"action\":\"title_choice\",\"prompt\":\"Choose title A/B/C/D/E, or S to auto-select A.\",\"next_map\":{\"A\":\"P6\",\"B\":\"P6\",\"C\":\"P6\",\"D\":\"P6\",\"E\":\"P6\",\"S\":\"P6\"}},{\"id\":\"P6\",\"type\":\"auto\",\"action\":\"create_article\",\"deliverable\":\"article_raw\",\"requirements\":{\"words_min\":1400,\"words_max\":1800,\"sections\":5,\"opening_words_target\":180,\"main_section_words_target\":250,\"value_bomb_words_target\":200,\"conclusion_words_target\":220,\"structure\":\"hook+vulnerable_authority_story+data_insights+practical_examples+actionable_steps\",\"formatting\":{\"paragraph_max_sentences\":2,\"bold_sentences_per_section_min\":2},\"content_requirements\":{\"use_voice_patterns_from_analysis\":true,\"include_min_stats\":3,\"include_6_quick_insights\":true,\"seo_considerations\":\"include_actionable_headline_and_subheads\",\"citation_policy\":\"cite_reliable_sources_or_note_estimate\"}},\"next\":\"P7\"},{\"id\":\"P7\",\"type\":\"auto\",\"action\":\"humanize_article\",\"input_from\":\"P6\",\"deliverable\":\"article_humanized\",\"description\":\"Improve authenticity, rhetorical questions, natural tangents, voice quirks, varied sentence lengths, organic transitions. Preserve constraints and formatting. Output final article ready for publishing (plain text, no markdown).\",\"next\":\"P8\"},{\"id\":\"P8\",\"type\":\"auto\",\"action\":\"generate_image_prompts\",\"deliverable\":\"image_prompts\",\"requirements\":{\"count\":3,\"each\":\"detailed_ai_prompt+3_stock_search_terms\",\"stock_sources\":[\"unsplash\",\"pexels\",\"pixabay\"],\"include_visual_metaphors_matching_article\":true},\"next\":\"P9\"},{\"id\":\"P9\",\"type\":\"auto\",\"action\":\"generate_social_pack\",\"deliverable\":\"social_posts\",\"platforms\":[{\"name\":\"LinkedIn\",\"char_limit\":2000,\"format\":\"professional_hook+data_point+context+CTA 'Read the full analysis: [LINK]' \"},{\"name\":\"Twitter/X\",\"char_limit\":280,\"format\":\"sharp_hook+hashtag+short_link 'Full breakdown: [LINK]' \"},{\"name\":\"Instagram\",\"char_limit\":2200,\"format\":\"punchy_hook+emojis+hashtags+short_link 'Full insights 👆 [LINK]' \"},{\"name\":\"Facebook\",\"char_limit\":300,\"format\":\"community_hook+link 'Learn more: [LINK]' \"},{\"name\":\"Reddit\",\"char_limit\":40000,\"format\":\"curiosity_title+value_hook+body 'Full analysis: [LINK]' \"},{\"name\":\"Bluesky\",\"char_limit\":192,\"format\":\"thoughtful_hook+link 'More insights: [LINK]' \"}],\"voice_application\":\"match_humanized_article_voice\",\"count_variations\":2,\"next\":\"P10\"},{\"id\":\"P10\",\"type\":\"input\",\"action\":\"review_offer\",\"prompt\":\"Would you like a comprehensive quality review against workflow specs? YES=Full review, NO=Skip, S=Skip.\",\"options\":[\"YES\",\"NO\",\"S\"],\"next_map\":{\"YES\":\"P11\",\"NO\":\"P12\",\"S\":\"P12\"}},{\"id\":\"P11\",\"type\":\"auto\",\"action\":\"comprehensive_review\",\"description\":\"Audit deliverables vs constraints (word counts, formatting, stats, voice match). Produce scorecard and list of gaps and suggested corrections.\",\"next\":\"P12\"},{\"id\":\"P12\",\"type\":\"input\",\"action\":\"save_voice_profile_offer\",\"prompt\":\"Would you like a save a reusable voice profile (minified summary) for future use? Y=Yes N=No.\",\"options\":[\"Y\",\"N\"],\"next_map\":{\"Y\":\"P13\",\"N\":\"END\"}},{\"id\":\"P13\",\"type\":\"auto\",\"action\":\"create_voice_profile\",\"deliverable\":\"voice_profile_minified\",\"requirements\":{\"summary_only\":\"include_top_leverage_points_top_growth_opportunities_preferred_tone_sentence_examples_minified\",\"no_raw_text\":\"do_not_include_or_echo_user_raw_inputs\",\"format\":\"minified_json\",\"store_policy\":\"returned_to_user_only_no_persistent_storage_without_user_action\"},\"next\":\"END\"},{\"id\":\"END\",\"type\":\"final\",\"action\":\"complete\",\"message\":\"Workflow complete. All deliverables returned to user.\"}],\"outputs\":{\"article_field\":\"article_humanized\",\"image_prompts_field\":\"image_prompts\",\"social_pack_field\":\"social_posts\",\"review_report_field\":\"comprehensive_review_report_if_requested\",\"voice_profile_field\":\"voice_profile_minified_if_requested\"},\"ui_preferences\":{\"skip_command\":\"S\",\"auto_select_behavior\":\"S selects default (A for titles, defaults for audience/topic)\",\"progress_messages\":true,\"visible_prompts_only\":true},\"developer_notes\":{\"policy_compliance\":\"This JSON is user-level instructions only. It does not request or enforce any system-level changes, hidden storage, or suppression of model reasoning. All storage of user data or profiles requires explicit user confirmation and is returned to the user rather than stored by the assistant.\"}}}"
           },
           {
             "id": "004",
